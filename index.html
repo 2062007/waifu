@@ -3,66 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Random Waifu</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #1a1a1a, #2c003e);
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      height: 100vh;
-      overflow: hidden;
-    }
-    h1 {
-      font-size: 2rem;
-      background: -webkit-linear-gradient(#ff4da6, #ff66cc);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      margin: 15px 0;
-      text-align: center;
-    }
-    .card {
-      flex: 1;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      width: 100%;
-      overflow: hidden;
-    }
-    .card img {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain; /* giữ tỉ lệ */
-      border-radius: 12px;
-      box-shadow: 0 0 25px rgba(255, 77, 166, 0.5);
-      transition: 0.3s;
-    }
-    .controls {
-      display: flex;
-      justify-content: center;
-      gap: 15px;
-      padding: 15px;
-    }
-    button {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 12px;
-      background: #ff4da6;
-      color: #fff;
-      font-size: 16px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    button:hover {
-      background: #ff66cc;
-      transform: scale(1.05);
-    }
-  </style>
   <script>
-    let currentImg = "";
-
     async function newWaifu() {
       const apis = [
         "https://api.waifu.im/search?included_tags=maid",
@@ -75,7 +16,13 @@
         "https://nekos.best/api/v2/neko/89ad0c09-112f-4111-9b86-5131b1e6d6ca.png",
         "https://nekos.best/api/v2/neko/bf5e4463-1458-445d-8118-9d0064dce802.png",
         "https://nekos.best/api/v2/neko/5005b597-1181-4a23-8517-f5a6b0855b82.png",
-        "https://nekos.best/api/v2/neko/cb5efb0e-2a5a-4307-851a-cc95dfdd165a.png"
+        "https://nekos.best/api/v2/neko/cb5efb0e-2a5a-4307-851a-cc95dfdd165a.png",
+        "https://nekos.best/api/v2/neko/25df335c-f4f9-4975-9b18-47938c55c1d1.png",
+        "https://nekos.best/api/v2/neko/d9b75555-e688-4373-8928-d18e7bbf087e.png",
+        "https://nekos.best/api/v2/neko/4b419706-2035-40da-bd98-409d922fa133.png",
+        "https://nekos.best/api/v2/neko/5cc298fb-e5c5-4394-9a23-51ee7f2b4525.png",
+        "https://nekos.best/api/v2/neko/9e444995-666b-49c2-8e73-26dd158b5656.png",
+        "https://nekos.best/api/v2/neko/2c45b4c3-e58a-41a9-8a44-ddb6eb15e543.png"
       ];
 
       const url = apis[Math.floor(Math.random() * apis.length)];
@@ -88,36 +35,69 @@
           data.results?.[0]?.url;
 
         if (!imgUrl) throw new Error("No image");
-        currentImg = imgUrl;
         document.getElementById("waifu").src = imgUrl;
+        document.getElementById("downloadBtn").href = imgUrl;
       } catch {
         const fallback = fallbacks[Math.floor(Math.random() * fallbacks.length)];
-        currentImg = fallback;
         document.getElementById("waifu").src = fallback;
+        document.getElementById("downloadBtn").href = fallback;
       }
     }
-
-    function downloadWaifu() {
-      if (!currentImg) return;
-      const a = document.createElement("a");
-      a.href = currentImg;
-      a.download = "waifu.png";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-
     window.onload = newWaifu;
   </script>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      background: #111;
+      color: #fff;
+      font-family: Arial, sans-serif;
+    }
+    h1 {
+      margin: 20px 0;
+    }
+    #waifu {
+      max-width: 90vw;
+      max-height: 80vh;
+      border-radius: 16px;
+      box-shadow: 0 0 20px #555;
+      object-fit: contain;
+    }
+    .top-buttons {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      gap: 10px;
+    }
+    button, a.download {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 12px;
+      background: #ff4da6;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      text-decoration: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      transition: 0.2s;
+    }
+    button:hover, a.download:hover {
+      background: #ff3399;
+      transform: scale(1.05);
+    }
+  </style>
 </head>
 <body>
-  <h1>✨ Random Waifu ✨</h1>
-  <div class="card">
-    <img id="waifu" src="" alt="waifu">
-  </div>
-  <div class="controls">
+  <h1>✨ Waifu Generator ✨</h1>
+  <div class="top-buttons">
     <button onclick="newWaifu()">➡️ New Waifu</button>
-    <button onclick="downloadWaifu()">⬇️ Download</button>
+    <a id="downloadBtn" class="download" href="#" download="waifu.png">⬇️ Download</a>
   </div>
+  <img id="waifu" src="">
 </body>
 </html>
