@@ -11,6 +11,20 @@
         "https://nekos.best/api/v2/waifu",
         "https://api.nekos.dev/api/v3/images/sfw/img/neko"
       ];
+
+      const fallbacks = [
+        "https://nekos.best/api/v2/neko/89ad0c09-112f-4111-9b86-5131b1e6d6ca.png",
+        "https://nekos.best/api/v2/neko/bf5e4463-1458-445d-8118-9d0064dce802.png",
+        "https://nekos.best/api/v2/neko/5005b597-1181-4a23-8517-f5a6b0855b82.png",
+        "https://nekos.best/api/v2/neko/cb5efb0e-2a5a-4307-851a-cc95dfdd165a.png",
+        "https://nekos.best/api/v2/neko/25df335c-f4f9-4975-9b18-47938c55c1d1.png",
+        "https://nekos.best/api/v2/neko/d9b75555-e688-4373-8928-d18e7bbf087e.png",
+        "https://nekos.best/api/v2/neko/4b419706-2035-40da-bd98-409d922fa133.png",
+        "https://nekos.best/api/v2/neko/5cc298fb-e5c5-4394-9a23-51ee7f2b4525.png",
+        "https://nekos.best/api/v2/neko/9e444995-666b-49c2-8e73-26dd158b5656.png",
+        "https://nekos.best/api/v2/neko/2c45b4c3-e58a-41a9-8a44-ddb6eb15e543.png"
+      ];
+
       const url = apis[Math.floor(Math.random() * apis.length)];
       try {
         let res = await fetch(url);
@@ -18,12 +32,13 @@
         let imgUrl =
           data.images?.[0]?.url ||
           data.url ||
-          data.results?.[0]?.url ||
-          "https://raw.githubusercontent.com/nam348/img/main/fallback.png";
+          data.results?.[0]?.url;
+
+        if (!imgUrl) throw new Error("No image");
         document.getElementById("waifu").src = imgUrl;
       } catch {
-        document.getElementById("waifu").src =
-          "https://raw.githubusercontent.com/nam348/img/main/fallback.png";
+        const fallback = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+        document.getElementById("waifu").src = fallback;
       }
     }
     window.onload = newWaifu;
@@ -32,8 +47,8 @@
 <body style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#111;color:#fff">
   <h1>✨ Waifu Generator ✨</h1>
   <img id="waifu" src="" style="max-height:80vh;border-radius:16px;box-shadow:0 0 20px #555">
-  <button onclick="newWaifu()" style="margin-top:20px;padding:10px 20px;border:none;border-radius:12px;background:#ff4da6;color:#fff;font-size:18px;cursor:pointer">
-    New Waifu
+  <button onclick="newWaifu()" style="margin-top:20px;padding:10px 20px;border:none;border-radius:12px;background:#ff4da6;color:#fff;font-size:18px;cursor:pointer;align-self:flex-end">
+    ➡️ New Waifu
   </button>
 </body>
 </html>
