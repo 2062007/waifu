@@ -46,15 +46,29 @@
       try {
         const res = await fetch(currentImgUrl);
         const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
 
+        // Lấy MIME type (vd: "image/png", "image/jpeg", ...)
+        let mime = blob.type || "image/png";
+        let ext = mime.split("/")[1]; // tách phần sau dấu "/"
+
+        // Nếu URL có sẵn đuôi file thì ưu tiên lấy từ URL
+        const urlExt = currentImgUrl.split(".").pop().split("?")[0];
+        if (["png","jpg","jpeg","webp","gif"].includes(urlExt.toLowerCase())) {
+          ext = urlExt;
+        }
+
+        // Tạo tên file theo ngày giờ
+        const now = new Date();
+        const timestamp = now.toISOString().replace(/[:.]/g, "-");
+        const filename = `waifu-${timestamp}.${ext}`;
+
+        const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = "waifu.png"; // tên file
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         a.remove();
-
         URL.revokeObjectURL(url);
       } catch (e) {
         alert("❌ Lỗi tải ảnh!");
