@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <title>Random Waifu</title>
   <script>
+    let currentImgUrl = "";
+
     async function newWaifu() {
       const apis = [
         "https://api.waifu.im/search?included_tags=maid",
@@ -17,12 +19,7 @@
         "https://nekos.best/api/v2/neko/bf5e4463-1458-445d-8118-9d0064dce802.png",
         "https://nekos.best/api/v2/neko/5005b597-1181-4a23-8517-f5a6b0855b82.png",
         "https://nekos.best/api/v2/neko/cb5efb0e-2a5a-4307-851a-cc95dfdd165a.png",
-        "https://nekos.best/api/v2/neko/25df335c-f4f9-4975-9b18-47938c55c1d1.png",
-        "https://nekos.best/api/v2/neko/d9b75555-e688-4373-8928-d18e7bbf087e.png",
-        "https://nekos.best/api/v2/neko/4b419706-2035-40da-bd98-409d922fa133.png",
-        "https://nekos.best/api/v2/neko/5cc298fb-e5c5-4394-9a23-51ee7f2b4525.png",
-        "https://nekos.best/api/v2/neko/9e444995-666b-49c2-8e73-26dd158b5656.png",
-        "https://nekos.best/api/v2/neko/2c45b4c3-e58a-41a9-8a44-ddb6eb15e543.png"
+        "https://nekos.best/api/v2/neko/25df335c-f4f9-4975-9b18-47938c55c1d1.png"
       ];
 
       const url = apis[Math.floor(Math.random() * apis.length)];
@@ -35,14 +32,35 @@
           data.results?.[0]?.url;
 
         if (!imgUrl) throw new Error("No image");
+        currentImgUrl = imgUrl;
         document.getElementById("waifu").src = imgUrl;
-        document.getElementById("downloadBtn").href = imgUrl;
       } catch {
         const fallback = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+        currentImgUrl = fallback;
         document.getElementById("waifu").src = fallback;
-        document.getElementById("downloadBtn").href = fallback;
       }
     }
+
+    async function downloadWaifu() {
+      if (!currentImgUrl) return;
+      try {
+        const res = await fetch(currentImgUrl);
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "waifu.png"; // tên file
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        alert("❌ Lỗi tải ảnh!");
+      }
+    }
+
     window.onload = newWaifu;
   </script>
   <style>
@@ -74,7 +92,7 @@
       display: flex;
       gap: 10px;
     }
-    button, a.download {
+    button {
       padding: 10px 20px;
       border: none;
       border-radius: 12px;
@@ -82,11 +100,10 @@
       color: #fff;
       font-size: 16px;
       cursor: pointer;
-      text-decoration: none;
       box-shadow: 0 4px 12px rgba(0,0,0,0.4);
       transition: 0.2s;
     }
-    button:hover, a.download:hover {
+    button:hover {
       background: #ff3399;
       transform: scale(1.05);
     }
@@ -96,7 +113,7 @@
   <h1>✨ Waifu Generator ✨</h1>
   <div class="top-buttons">
     <button onclick="newWaifu()">➡️ New Waifu</button>
-    <a id="downloadBtn" class="download" href="#" download="waifu.png">⬇️ Download</a>
+    <button onclick="downloadWaifu()">⬇️ Download</button>
   </div>
   <img id="waifu" src="">
 </body>
