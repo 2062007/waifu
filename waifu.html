@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Random Waifu</title>
+  <script>
+    async function newWaifu() {
+      const apis = [
+        "https://api.waifu.im/search?included_tags=maid",
+        "https://api.waifu.pics/sfw/waifu",
+        "https://nekos.best/api/v2/waifu",
+        "https://api.nekos.dev/api/v3/images/sfw/img/neko"
+      ];
+      const url = apis[Math.floor(Math.random() * apis.length)];
+      try {
+        let res = await fetch(url);
+        let data = await res.json();
+        let imgUrl =
+          data.images?.[0]?.url ||
+          data.url ||
+          data.results?.[0]?.url ||
+          "https://raw.githubusercontent.com/nam348/img/main/fallback.png";
+        document.getElementById("waifu").src = imgUrl;
+      } catch {
+        document.getElementById("waifu").src =
+          "https://raw.githubusercontent.com/nam348/img/main/fallback.png";
+      }
+    }
+    window.onload = newWaifu;
+  </script>
+</head>
+<body style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#111;color:#fff">
+  <h1>✨ Waifu Generator ✨</h1>
+  <img id="waifu" src="" style="max-height:80vh;border-radius:16px;box-shadow:0 0 20px #555">
+  <button onclick="newWaifu()" style="margin-top:20px;padding:10px 20px;border:none;border-radius:12px;background:#ff4da6;color:#fff;font-size:18px;cursor:pointer">
+    New Waifu
+  </button>
+</body>
+</html>
