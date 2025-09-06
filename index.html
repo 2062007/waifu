@@ -10,46 +10,40 @@
       background: linear-gradient(135deg, #1a1a1a, #2c003e);
       color: #fff;
       display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-    .container {
-      display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 20px;
-      max-width: 95vw;
+      height: 100vh;
+      overflow: hidden;
     }
     h1 {
       font-size: 2rem;
       background: -webkit-linear-gradient(#ff4da6, #ff66cc);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      margin-bottom: 10px;
+      margin: 15px 0;
       text-align: center;
     }
     .card {
-      background: #222;
-      border-radius: 16px;
-      box-shadow: 0 0 20px rgba(255, 77, 166, 0.4);
+      flex: 1;
       display: flex;
       justify-content: center;
       align-items: center;
-      max-width: 90vw;
-      max-height: 70vh;
+      width: 100%;
       overflow: hidden;
     }
     .card img {
       max-width: 100%;
       max-height: 100%;
-      object-fit: contain; /* giữ tỉ lệ gốc, không giãn */
+      object-fit: contain; /* giữ tỉ lệ */
       border-radius: 12px;
+      box-shadow: 0 0 25px rgba(255, 77, 166, 0.5);
+      transition: 0.3s;
     }
     .controls {
       display: flex;
-      justify-content: flex-end;
-      width: 100%;
+      justify-content: center;
+      gap: 15px;
+      padding: 15px;
     }
     button {
       padding: 10px 20px;
@@ -57,7 +51,7 @@
       border-radius: 12px;
       background: #ff4da6;
       color: #fff;
-      font-size: 18px;
+      font-size: 16px;
       cursor: pointer;
       transition: all 0.2s;
     }
@@ -67,6 +61,8 @@
     }
   </style>
   <script>
+    let currentImg = "";
+
     async function newWaifu() {
       const apis = [
         "https://api.waifu.im/search?included_tags=maid",
@@ -92,24 +88,36 @@
           data.results?.[0]?.url;
 
         if (!imgUrl) throw new Error("No image");
+        currentImg = imgUrl;
         document.getElementById("waifu").src = imgUrl;
       } catch {
         const fallback = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+        currentImg = fallback;
         document.getElementById("waifu").src = fallback;
       }
     }
+
+    function downloadWaifu() {
+      if (!currentImg) return;
+      const a = document.createElement("a");
+      a.href = currentImg;
+      a.download = "waifu.png";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
     window.onload = newWaifu;
   </script>
 </head>
 <body>
-  <div class="container">
-    <h1>✨ Random Waifu ✨</h1>
-    <div class="card">
-      <img id="waifu" src="" alt="waifu">
-    </div>
-    <div class="controls">
-      <button onclick="newWaifu()">➡️ New Waifu</button>
-    </div>
+  <h1>✨ Random Waifu ✨</h1>
+  <div class="card">
+    <img id="waifu" src="" alt="waifu">
+  </div>
+  <div class="controls">
+    <button onclick="newWaifu()">➡️ New Waifu</button>
+    <button onclick="downloadWaifu()">⬇️ Download</button>
   </div>
 </body>
 </html>
