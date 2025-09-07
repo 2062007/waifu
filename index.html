@@ -45,51 +45,15 @@
       }
     }
 
-    async function downloadWaifu() {
+    function downloadWaifu() {
       if (!currentImgUrl) return;
-
-      try {
-        const res = await fetch(currentImgUrl).catch(() => null);
-
-        if (res && res.ok) {
-          const blob = await res.blob();
-
-          // MIME + extension
-          let mime = blob.type || "image/png";
-          let ext = mime.split("/")[1] || "png";
-
-          // nếu URL có đuôi sẵn thì lấy
-          const urlExt = currentImgUrl.split(".").pop().split("?")[0];
-          if (["png","jpg","jpeg","webp","gif"].includes(urlExt.toLowerCase())) {
-            ext = urlExt;
-          }
-
-          // đặt tên file timestamp
-          const now = new Date();
-          const timestamp = now.toISOString().replace(/[:.]/g, "-");
-          const filename = `waifu-${timestamp}.${ext}`;
-
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = filename;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          URL.revokeObjectURL(url);
-        } else {
-          // fallback: mở link ảnh trực tiếp
-          const a = document.createElement("a");
-          a.href = currentImgUrl;
-          a.download = "";
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-        }
-      } catch (e) {
-        alert("❌ Lỗi tải ảnh, mở link trực tiếp!");
-        window.open(currentImgUrl, "_blank");
-      }
+      const a = document.createElement("a");
+      a.href = currentImgUrl;
+      a.target = "_blank"; // mở tab mới nếu browser chặn download
+      a.download = "waifu"; // browser nào hỗ trợ thì sẽ tải
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
     }
 
     window.onload = newWaifu;
