@@ -14,7 +14,7 @@
         "https://api.waifu.im/search?included_tags=maid",
         "https://api.waifu.pics/sfw/waifu",
         "https://nekos.best/api/v2/waifu",
-        "https://api.nekos.dev/api/v3/images/sfw/img/neko"
+        "https://api.waifu.im/search?included_tags=waifu"
       ];
 
       const fallbacks = [
@@ -46,7 +46,6 @@
 
     function downloadWaifu() {
       if (!currentImgUrl) return;
-      // Luôn gọi proxy backend để tránh CORS và tải 100%
       const proxy = "https://proxydownload.onrender.com/download?url=";
       window.open(proxy + encodeURIComponent(currentImgUrl), "_blank");
     }
@@ -108,4 +107,3 @@
   <img id="waifu" src="">
 </body>
 </html>
-
