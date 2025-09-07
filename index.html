@@ -26,15 +26,19 @@
       try {
         let res = await fetch(url);
         let data = await res.json();
+
         let imgUrl =
-          data.images?.[0]?.url ||
-          data.url ||
-          data.results?.[0]?.url;
+          data.images?.[0]?.url ||        // waifu.im
+          data.url ||                     // waifu.pics
+          data.results?.[0]?.url ||       // nekos.best
+          data.data?.response?.url ||     // nekos.dev
+          data.response?.url || null;
 
         if (!imgUrl) throw new Error("No image");
         currentImgUrl = imgUrl;
         document.getElementById("waifu").src = imgUrl;
-      } catch {
+      } catch (e) {
+        console.warn("API lỗi, fallback:", e);
         const fallback = fallbacks[Math.floor(Math.random() * fallbacks.length)];
         currentImgUrl = fallback;
         document.getElementById("waifu").src = fallback;
@@ -43,35 +47,48 @@
 
     async function downloadWaifu() {
       if (!currentImgUrl) return;
+
       try {
-        const res = await fetch(currentImgUrl);
-        const blob = await res.blob();
+        const res = await fetch(currentImgUrl).catch(() => null);
 
-        // Lấy MIME type (vd: "image/png", "image/jpeg", ...)
-        let mime = blob.type || "image/png";
-        let ext = mime.split("/")[1]; // tách phần sau dấu "/"
+        if (res && res.ok) {
+          const blob = await res.blob();
 
-        // Nếu URL có sẵn đuôi file thì ưu tiên lấy từ URL
-        const urlExt = currentImgUrl.split(".").pop().split("?")[0];
-        if (["png","jpg","jpeg","webp","gif"].includes(urlExt.toLowerCase())) {
-          ext = urlExt;
+          // MIME + extension
+          let mime = blob.type || "image/png";
+          let ext = mime.split("/")[1] || "png";
+
+          // nếu URL có đuôi sẵn thì lấy
+          const urlExt = currentImgUrl.split(".").pop().split("?")[0];
+          if (["png","jpg","jpeg","webp","gif"].includes(urlExt.toLowerCase())) {
+            ext = urlExt;
+          }
+
+          // đặt tên file timestamp
+          const now = new Date();
+          const timestamp = now.toISOString().replace(/[:.]/g, "-");
+          const filename = `waifu-${timestamp}.${ext}`;
+
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+        } else {
+          // fallback: mở link ảnh trực tiếp
+          const a = document.createElement("a");
+          a.href = currentImgUrl;
+          a.download = "";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
         }
-
-        // Tạo tên file theo ngày giờ
-        const now = new Date();
-        const timestamp = now.toISOString().replace(/[:.]/g, "-");
-        const filename = `waifu-${timestamp}.${ext}`;
-
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
       } catch (e) {
-        alert("❌ Lỗi tải ảnh!");
+        alert("❌ Lỗi tải ảnh, mở link trực tiếp!");
+        window.open(currentImgUrl, "_blank");
       }
     }
 
