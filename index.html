@@ -14,30 +14,36 @@
         "https://api.nekos.dev/api/v3/images/sfw/img/neko"
       ];
 
+      const fallbacks = [
+        "https://nekos.best/api/v2/neko/89ad0c09-112f-4111-9b86-5131b1e6d6ca.png",
+        "https://nekos.best/api/v2/neko/bf5e4463-1458-445d-8118-9d0064dce802.png",
+        "https://nekos.best/api/v2/neko/5005b597-1181-4a23-8517-f5a6b0855b82.png",
+        "https://nekos.best/api/v2/neko/cb5efb0e-2a5a-4307-851a-cc95dfdd165a.png",
+        "https://nekos.best/api/v2/neko/25df335c-f4f9-4975-9b18-47938c55c1d1.png"
+      ];
+
       const url = apis[Math.floor(Math.random() * apis.length)];
       try {
         let res = await fetch(url);
         let data = await res.json();
-
         let imgUrl =
           data.images?.[0]?.url ||
           data.url ||
-          data.results?.[0]?.url ||
-          data.data?.response?.url ||
-          data.response?.url ||
-          null;
+          data.results?.[0]?.url;
 
         if (!imgUrl) throw new Error("No image");
         currentImgUrl = imgUrl;
         document.getElementById("waifu").src = imgUrl;
-      } catch (e) {
-        alert("API lỗi, load lại thử!");
+      } catch {
+        const fallback = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+        currentImgUrl = fallback;
+        document.getElementById("waifu").src = fallback;
       }
     }
 
     function downloadWaifu() {
       if (!currentImgUrl) return;
-      // Gọi backend proxy trên Render để tải 100%
+      // Luôn gọi proxy backend để tránh CORS và tải 100%
       const proxy = "https://proxydownload.onrender.com/download?url=";
       window.open(proxy + encodeURIComponent(currentImgUrl), "_blank");
     }
@@ -56,7 +62,9 @@
       color: #fff;
       font-family: Arial, sans-serif;
     }
-    h1 { margin: 20px 0; }
+    h1 {
+      margin: 20px 0;
+    }
     #waifu {
       max-width: 90vw;
       max-height: 80vh;
