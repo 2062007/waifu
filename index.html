@@ -24,7 +24,6 @@
       padding: 20px;
     }
 
-    /* main container */
     .generator {
       background: rgba(20, 20, 30, 0.7);
       backdrop-filter: blur(2px);
@@ -56,7 +55,6 @@
       font-size: 0.9rem;
     }
 
-    /* image wrapper */
     .image-frame {
       background: #00000055;
       border-radius: 28px;
@@ -79,7 +77,6 @@
       opacity: 0.6;
     }
 
-    /* button bar */
     .button-bar {
       display: flex;
       flex-wrap: wrap;
@@ -115,7 +112,6 @@
       transform: scale(0.98);
     }
 
-    /* footer */
     .credit {
       margin-top: 25px;
       font-size: 0.75rem;
@@ -123,7 +119,6 @@
       text-align: center;
     }
 
-    /* responsive */
     @media (max-width: 550px) {
       .generator {
         padding: 1rem;
@@ -157,7 +152,7 @@
 
 <script>
   (function() {
-    // ---------- API list (no fallback hardcoded images) ----------
+    // ---------- API list ----------
     const API_LIST = [
       {
         name: 'waifu.im_maid',
@@ -186,14 +181,14 @@
       }
     ];
 
-    let currentImgUrl = '';      // stores current image URL
-    let lastImgUrl = '';         // to avoid immediate repeats
+    let currentImgUrl = '';
+    let lastImgUrl = '';
     let isLoading = false;
     const imgElement = document.getElementById('waifu');
     const newBtn = document.getElementById('newBtn');
     const downloadBtn = document.getElementById('downloadBtn');
 
-    // helper: random shuffle order of APIs each call (spreads variety)
+    // Xáo trộn danh sách API
     function getShuffledApis() {
       const shuffled = [...API_LIST];
       for (let i = shuffled.length - 1; i > 0; i--) {
@@ -203,45 +198,72 @@
       return shuffled;
     }
 
-    // attempt to fetch image from APIs sequentially until one works
-    async function fetchUniqueImage(avoidUrl = '', attempt = 0) {
-      const maxAttempts = 3;   // try up to 3 rounds to avoid same image
-      const apisToTry = getShuffledApis();
-
-      for (const api of apisToTry) {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 8000);
-          const response = await fetch(api.url, { signal: controller.signal });
-          clearTimeout(timeoutId);
-
-          if (!response.ok) continue;
-          const data = await response.json();
-          const imageUrl = api.extract(data);
-
-          if (imageUrl && typeof imageUrl === 'string' && imageUrl.startsWith('http')) {
-            // avoid immediate repeat: if new URL equals lastImgUrl (or avoidUrl) and not final attempt
-            if (attempt < maxAttempts && (imageUrl === lastImgUrl || imageUrl === avoidUrl)) {
-              // repeat detected, continue to next API but count attempt
-              continue;
-            }
-            return imageUrl;
-          }
-        } catch (err) {
-          // silent fail, try next API
-          console.debug(`API ${api.name} failed:`, err);
-        }
-      }
-      // if we still have attempts left, retry with fresh order (but increment attempt)
-      if (attempt + 1 < maxAttempts) {
-        return fetchUniqueImage(avoidUrl, attempt + 1);
-      }
-      // ultimate fallback: no static fallback images, but we keep previous image if exists
-      // but for first load or all fail -> throw error to keep previous or show friendly retry
-      throw new Error('All APIs failed after multiple attempts');
+    // Hàm fetch có timeout (dùng race, không cần AbortController để tránh lỗi Safari)
+    function fetchWithTimeout(url, ms = 5000) {
+      return Promise.race([
+        fetch(url),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms))
+      ]);
     }
 
-    // loading state management
+    // Tạo một promise fetch cho 1 API, tự động reject nếu ảnh trùng hoặc lỗi
+    function createApiPromise(api, avoidUrl) {
+      return fetchWithTimeout(api.url)
+        .then(response => {
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return response.json();
+        })
+        .then(data => {
+          const url = api.extract(data);
+          if (!url || typeof url !== 'string' || !url.startsWith('http')) {
+            throw new Error('Invalid URL');
+          }
+          // Loại bỏ nếu trùng với ảnh hiện tại hoặc ảnh trước đó
+          if (url === avoidUrl || url === lastImgUrl) {
+            throw new Error('Duplicate');
+          }
+          return url;
+        });
+    }
+
+    // Đa nhiệm: chạy tất cả API cùng lúc, lấy kết quả đầu tiên hợp lệ
+    function promiseAny(promises) {
+      // Polyfill nhẹ cho Promise.any (tương thích mọi trình duyệt)
+      return new Promise((resolve, reject) => {
+        let errors = [];
+        let remaining = promises.length;
+        if (remaining === 0) reject(new Error('No promises'));
+        promises.forEach((p, idx) => {
+          Promise.resolve(p).then(resolve).catch(err => {
+            errors[idx] = err;
+            remaining--;
+            if (remaining === 0) reject(new Error('All promises rejected'));
+          });
+        });
+      });
+    }
+
+    // Thực hiện lấy ảnh mới, có retry nếu toàn bộ API lỗi
+    async function fetchUniqueImage(avoidUrl, retries = 2) {
+      for (let attempt = 0; attempt <= retries; attempt++) {
+        const apis = getShuffledApis();
+        const promises = apis.map(api => createApiPromise(api, avoidUrl));
+        try {
+          const winner = await promiseAny(promises);
+          return winner;
+        } catch (e) {
+          console.debug(`Attempt ${attempt + 1} failed:`, e);
+          if (attempt < retries) {
+            // Chờ một chút trước khi thử lại
+            await new Promise(res => setTimeout(res, 600));
+          }
+        }
+      }
+      // Nếu hết lần thử vẫn lỗi, throw để xử lý bên ngoài
+      throw new Error('All retries exhausted');
+    }
+
+    // Cập nhật trạng thái loading
     function setLoading(loading) {
       isLoading = loading;
       if (loading) {
@@ -259,43 +281,24 @@
       }
     }
 
-    // main: update image
+    // Hàm chính: đổi ảnh mới
     async function newWaifu() {
       if (isLoading) return;
       setLoading(true);
-
       const previousUrl = currentImgUrl;
       try {
-        const newUrl = await fetchUniqueImage(currentImgUrl);
-        if (!newUrl) throw new Error('no valid URL');
+        const newUrl = await fetchUniqueImage(previousUrl);
         currentImgUrl = newUrl;
         lastImgUrl = currentImgUrl;
         imgElement.src = currentImgUrl;
         imgElement.alt = 'Waifu artwork';
       } catch (err) {
         console.warn('Image fetch error:', err);
-        // no fallback images, but if we had previous image keep it unchanged
         if (previousUrl) {
-          // keep previous image, just inform user silently
-          const msgDiv = document.createElement('div');
-          msgDiv.textContent = '⚠️ Could not fetch new image, using previous. Click again.';
-          msgDiv.style.position = 'fixed';
-          msgDiv.style.bottom = '20px';
-          msgDiv.style.left = '20px';
-          msgDiv.style.right = '20px';
-          msgDiv.style.backgroundColor = '#ff4da6aa';
-          msgDiv.style.color = 'white';
-          msgDiv.style.padding = '8px';
-          msgDiv.style.borderRadius = '30px';
-          msgDiv.style.textAlign = 'center';
-          msgDiv.style.fontSize = '0.8rem';
-          msgDiv.style.backdropFilter = 'blur(10px)';
-          msgDiv.style.zIndex = '999';
-          document.body.appendChild(msgDiv);
-          setTimeout(() => msgDiv.remove(), 2500);
+          // Giữ nguyên ảnh cũ, thông báo nhẹ nhàng
+          showToast('⚠️ Không lấy được ảnh mới, hãy thử lại');
         } else {
-          // very rare: no image at all -> display a simple info (no hardcoded fallback image)
-          imgElement.alt = 'No image, please retry';
+          // Chưa có ảnh nào, hiển thị placeholder SVG
           imgElement.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23222"%3E%3C/rect%3E%3Ctext x="50" y="55" font-size="12" fill="%23aaa" text-anchor="middle"%3E✨ click new ✨%3C/text%3E%3C/svg%3E';
           currentImgUrl = '';
         }
@@ -304,26 +307,42 @@
       }
     }
 
-    // download via proxy (always proxy, no fallback)
+    // Toast thông báo nhỏ (tự biến mất)
+    function showToast(message) {
+      const msgDiv = document.createElement('div');
+      msgDiv.textContent = message;
+      msgDiv.style.position = 'fixed';
+      msgDiv.style.bottom = '20px';
+      msgDiv.style.left = '20px';
+      msgDiv.style.right = '20px';
+      msgDiv.style.backgroundColor = '#ff4da6aa';
+      msgDiv.style.color = 'white';
+      msgDiv.style.padding = '10px';
+      msgDiv.style.borderRadius = '30px';
+      msgDiv.style.textAlign = 'center';
+      msgDiv.style.fontSize = '0.85rem';
+      msgDiv.style.backdropFilter = 'blur(10px)';
+      msgDiv.style.zIndex = '999';
+      document.body.appendChild(msgDiv);
+      setTimeout(() => msgDiv.remove(), 3000);
+    }
+
+    // Download qua proxy (giữ nguyên)
     function downloadWaifu() {
       if (!currentImgUrl) {
-        // if no image loaded, show small alert
         alert('No image to download yet — click "New Waifu" first.');
         return;
       }
-      // proxy endpoint that relays the image (as required)
       const proxyBase = 'https://proxydownload.onrender.com/download?url=';
-      // encode the full image URL
       const finalUrl = proxyBase + encodeURIComponent(currentImgUrl);
-      // open in new tab to trigger download / view
       window.open(finalUrl, '_blank');
     }
 
-    // event binding
+    // Gắn sự kiện
     newBtn.addEventListener('click', newWaifu);
     downloadBtn.addEventListener('click', downloadWaifu);
 
-    // initial load: get first image on page load
+    // Tải ảnh đầu tiên khi mở trang
     newWaifu();
   })();
 </script>
