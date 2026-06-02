@@ -7,7 +7,7 @@
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <meta name="theme-color" content="#1a1a2e">
-  <!-- Google Fonts for modern typography -->
+  <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,500;14..32,700&display=swap" rel="stylesheet">
   <style>
     * {
@@ -27,7 +27,6 @@
       position: relative;
     }
 
-    /* glassmorphic card container */
     .card {
       background: rgba(18, 16, 32, 0.65);
       backdrop-filter: blur(12px);
@@ -40,7 +39,6 @@
       transition: all 0.3s ease;
     }
 
-    /* header area */
     .header {
       text-align: center;
       margin-bottom: 1.8rem;
@@ -65,7 +63,6 @@
       opacity: 0.8;
     }
 
-    /* image wrapper & loading overlay */
     .image-container {
       position: relative;
       display: flex;
@@ -134,7 +131,6 @@
       letter-spacing: 0.5px;
     }
 
-    /* button panel */
     .button-group {
       display: flex;
       flex-wrap: wrap;
@@ -189,7 +185,6 @@
       transform: translateY(1px);
     }
 
-    /* status / info line */
     .info-bar {
       display: flex;
       justify-content: center;
@@ -223,7 +218,6 @@
       }
     }
 
-    /* smooth image transition */
     .fade-out {
       opacity: 0 !important;
     }
@@ -258,62 +252,65 @@
 
 <script>
   (function() {
-    // ---------- CONFIGURATION ----------
-    // API endpoints with custom parsing logic
-    const API_LIST = [
-      {
-        // waifu.im (maid themed, but returns multiple)
-        fetcher: async () => {
-          const url = "https://api.waifu.im/search?included_tags=maid&height=<=1200";
-          const res = await fetch(url);
-          const data = await res.json();
-          if (data.images && Array.isArray(data.images) && data.images.length) {
-            // pick random image from the returned array for variety
-            const randomIndex = Math.floor(Math.random() * data.images.length);
-            return data.images[randomIndex].url;
-          }
-          throw new Error("No image from waifu.im");
+    // ----- DOM elements với kiểm tra tồn tại -----
+    var imgElement = document.getElementById("waifu");
+    var newBtn = document.getElementById("newBtn");
+    var downloadBtn = document.getElementById("downloadBtn");
+    var loadingOverlay = document.getElementById("loadingOverlay");
+
+    // Nếu thiếu element thì dừng ngay (báo lỗi)
+    if (!imgElement || !newBtn || !downloadBtn || !loadingOverlay) {
+      console.error("Critical: DOM elements missing. Check IDs.");
+      return;
+    }
+
+    // ----- State -----
+    var currentImgUrl = "";
+    var lastDisplayedUrl = "";
+    var isFetching = false;
+
+    // ----- API danh sách (dùng function thay vì object method riêng để dễ bắt lỗi)-----
+    var API_LIST = [
+      async function() {
+        var url = "https://api.waifu.im/search?included_tags=maid&height=<=1200";
+        var res = await fetch(url);
+        var data = await res.json();
+        if (data.images && Array.isArray(data.images) && data.images.length) {
+          var idx = Math.floor(Math.random() * data.images.length);
+          return data.images[idx].url;
         }
+        throw new Error("waifu.im (maid) no image");
       },
-      {
-        // waifu.pics (simple sfw)
-        fetcher: async () => {
-          const url = "https://api.waifu.pics/sfw/waifu";
-          const res = await fetch(url);
-          const data = await res.json();
-          if (data.url) return data.url;
-          throw new Error("No image from waifu.pics");
-        }
+      async function() {
+        var url = "https://api.waifu.pics/sfw/waifu";
+        var res = await fetch(url);
+        var data = await res.json();
+        if (data.url) return data.url;
+        throw new Error("waifu.pics no image");
       },
-      {
-        // nekos.best
-        fetcher: async () => {
-          const url = "https://nekos.best/api/v2/waifu";
-          const res = await fetch(url);
-          const data = await res.json();
-          if (data.results && data.results.length && data.results[0].url) {
-            return data.results[0].url;
-          }
-          throw new Error("No image from nekos.best");
+      async function() {
+        var url = "https://nekos.best/api/v2/waifu";
+        var res = await fetch(url);
+        var data = await res.json();
+        if (data.results && data.results.length && data.results[0].url) {
+          return data.results[0].url;
         }
+        throw new Error("nekos.best no image");
       },
-      {
-        // waifu.im fallback style (waifu without maid tag, extra variety)
-        fetcher: async () => {
-          const url = "https://api.waifu.im/search?included_tags=waifu&height=<=1200";
-          const res = await fetch(url);
-          const data = await res.json();
-          if (data.images && Array.isArray(data.images) && data.images.length) {
-            const randomIndex = Math.floor(Math.random() * data.images.length);
-            return data.images[randomIndex].url;
-          }
-          throw new Error("No image from waifu.im generic");
+      async function() {
+        var url = "https://api.waifu.im/search?included_tags=waifu&height=<=1200";
+        var res = await fetch(url);
+        var data = await res.json();
+        if (data.images && Array.isArray(data.images) && data.images.length) {
+          var idx = Math.floor(Math.random() * data.images.length);
+          return data.images[idx].url;
         }
+        throw new Error("waifu.im (waifu tag) no image");
       }
     ];
 
-    // Robust offline fallbacks (rare case all APIs fail)
-    const FALLBACK_IMAGE_POOL = [
+    // Fallback ảnh cứng (đảm bảo luôn có ảnh)
+    var FALLBACK_IMAGE_POOL = [
       "https://nekos.best/api/v2/neko/89ad0c09-112f-4111-9b86-5131b1e6d6ca.png",
       "https://nekos.best/api/v2/neko/bf5e4463-1458-445d-8118-9d0064dce802.png",
       "https://nekos.best/api/v2/neko/5005b597-1181-4a23-8517-f5a6b0855b82.png",
@@ -321,18 +318,7 @@
       "https://nekos.best/api/v2/neko/25df335c-f4f9-4975-9b18-47938c55c1d1.png"
     ];
 
-    // DOM elements
-    const imgElement = document.getElementById("waifu");
-    const newBtn = document.getElementById("newBtn");
-    const downloadBtn = document.getElementById("downloadBtn");
-    const loadingOverlay = document.getElementById("loadingOverlay");
-
-    // State
-    let currentImgUrl = "";
-    let lastDisplayedUrl = "";     // used for duplicate avoidance
-    let isFetching = false;
-
-    // Helper: show/hide loading overlay
+    // Helper: loading overlay
     function setLoading(loading) {
       if (loading) {
         loadingOverlay.classList.add("active");
@@ -341,167 +327,167 @@
       }
     }
 
-    // Fade transition for image (smooth replace)
+    // Fade image transition
     function setImageWithFade(newUrl) {
-      return new Promise((resolve) => {
+      return new Promise(function(resolve) {
         if (!imgElement) return resolve();
-        // add fade-out class
         imgElement.classList.add("fade-out");
-        setTimeout(() => {
+        setTimeout(function() {
           imgElement.src = newUrl;
-          imgElement.onload = () => {
+          imgElement.onload = function() {
             imgElement.classList.remove("fade-out");
             resolve();
           };
-          imgElement.onerror = () => {
-            // if error, still remove class to avoid permanent fade
+          imgElement.onerror = function() {
             imgElement.classList.remove("fade-out");
-            resolve();
+            resolve(); // vẫn resolve để không treo
           };
         }, 120);
       });
     }
 
-    // get random fallback image
     function getRandomFallback() {
-      const randomIndex = Math.floor(Math.random() * FALLBACK_IMAGE_POOL.length);
-      return FALLBACK_IMAGE_POOL[randomIndex];
+      var idx = Math.floor(Math.random() * FALLBACK_IMAGE_POOL.length);
+      return FALLBACK_IMAGE_POOL[idx];
     }
 
-    // core fetch: tries random API endpoints, avoid repeating same url as lastDisplayedUrl
-    async function fetchWaifuImage(avoidUrl = null, attempt = 0) {
-      const MAX_ATTEMPTS = 5;
-      // create a shuffled copy of API list to call in random order
-      const shuffled = [...API_LIST];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    // Lấy ảnh từ API, tránh duplicate
+    async function fetchWaifuImage(avoidUrl) {
+      // Xáo trộn thứ tự API
+      var shuffled = API_LIST.slice();
+      for (var i = shuffled.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = shuffled[i];
+        shuffled[i] = shuffled[j];
+        shuffled[j] = temp;
       }
 
-      // try each API endpoint until one succeeds
-      for (let idx = 0; idx < shuffled.length; idx++) {
+      for (var k = 0; k < shuffled.length; k++) {
         try {
-          const api = shuffled[idx];
-          const imgUrl = await api.fetcher();
+          var imgUrl = await shuffled[k]();
           if (imgUrl && typeof imgUrl === "string" && imgUrl.startsWith("http")) {
-            // avoid duplicate consecutive image (if avoidUrl exists and matches)
             if (avoidUrl && imgUrl === avoidUrl) {
-              console.log("duplicate avoided, retry different api");
-              continue;  // skip this image, try next API
+              console.log("duplicate avoided");
+              continue;
             }
             return imgUrl;
           }
         } catch (err) {
-          console.warn(`API error (${idx}):`, err);
-          // continue to next API
+          console.warn("API error: ", err);
         }
       }
 
-      // if all APIs failed, fallback but still avoid last displayed image if possible
-      if (attempt < 2) {
-        // try one more time with full random endpoints and ignore avoid? but use fallback images
-        const fallbackImg = getRandomFallback();
-        if (avoidUrl && fallbackImg === avoidUrl) {
-          // if fallback still same as last, pick another from pool
-          for (let f of FALLBACK_IMAGE_POOL) {
-            if (f !== avoidUrl) return f;
+      // Fallback khi tất cả API lỗi
+      var fallback = getRandomFallback();
+      if (avoidUrl && fallback === avoidUrl) {
+        for (var f = 0; f < FALLBACK_IMAGE_POOL.length; f++) {
+          if (FALLBACK_IMAGE_POOL[f] !== avoidUrl) {
+            return FALLBACK_IMAGE_POOL[f];
           }
         }
-        return fallbackImg;
       }
-      return getRandomFallback();
+      return fallback;
     }
 
-    // Main routine: get new waifu with anti-duplicate logic
+    // Tải waifu mới
     async function loadNewWaifu() {
       if (isFetching) return;
       isFetching = true;
       setLoading(true);
 
       try {
-        // we attempt to avoid getting the exact same URL as currentImgUrl (last displayed)
-        let newUrl = await fetchWaifuImage(lastDisplayedUrl, 0);
-        
-        // extra safety: if for some reason newUrl still equals lastDisplayedUrl (very rare)
-        // perform one more explicit retry using different approach
+        var newUrl = await fetchWaifuImage(lastDisplayedUrl);
+        // Phòng trường hợp vẫn bị trùng (rất hy hữu)
         if (newUrl === lastDisplayedUrl && lastDisplayedUrl !== "") {
-          console.log("rare duplicate again, forcing re-fetch with extended pool");
-          // try to fetch again, but now we temporarily ignore avoid to get any new one?
-          for (let i = 0; i < FALLBACK_IMAGE_POOL.length; i++) {
+          for (var i = 0; i < FALLBACK_IMAGE_POOL.length; i++) {
             if (FALLBACK_IMAGE_POOL[i] !== lastDisplayedUrl) {
               newUrl = FALLBACK_IMAGE_POOL[i];
               break;
             }
           }
         }
-        
-        // update state and image
         currentImgUrl = newUrl;
         await setImageWithFade(newUrl);
         lastDisplayedUrl = newUrl;
       } catch (err) {
-        console.error("critical error in loading waifu", err);
-        // ultimate fallback: show a random fallback image that is not the same if possible
-        let emergencyUrl = getRandomFallback();
-        if (emergencyUrl === lastDisplayedUrl) {
-          for (let alt of FALLBACK_IMAGE_POOL) {
-            if (alt !== lastDisplayedUrl) {
-              emergencyUrl = alt;
+        console.error("loadNewWaifu critical error:", err);
+        var emergency = getRandomFallback();
+        if (emergency === lastDisplayedUrl && lastDisplayedUrl !== "") {
+          for (var e = 0; e < FALLBACK_IMAGE_POOL.length; e++) {
+            if (FALLBACK_IMAGE_POOL[e] !== lastDisplayedUrl) {
+              emergency = FALLBACK_IMAGE_POOL[e];
               break;
             }
           }
         }
-        currentImgUrl = emergencyUrl;
-        await setImageWithFade(emergencyUrl);
-        lastDisplayedUrl = emergencyUrl;
+        currentImgUrl = emergency;
+        await setImageWithFade(emergency);
+        lastDisplayedUrl = emergency;
       } finally {
         setLoading(false);
         isFetching = false;
       }
     }
 
-    // Download functionality with cross-origin proxy & better UX
-    function downloadImage() {
+    // Tải ảnh về (dùng fetch + blob để tránh redirect)
+    async function downloadImage() {
       if (!currentImgUrl) {
         console.warn("no image loaded");
         return;
       }
-      
-      // show a small user feedback (we don't have toast, but just open proxy in new tab)
-      // Use our proxy endpoint to avoid CORS download issues, but if proxy fails, open raw image in new tab.
-      const proxyUrl = `https://proxydownload.onrender.com/download?url=${encodeURIComponent(currentImgUrl)}`;
-      
-      // we open a new tab with proxy - user can save or right-click. Better than nothing.
-      const downloadWindow = window.open(proxyUrl, "_blank");
-      if (!downloadWindow) {
-        // fallback: just open raw image in new tab (user can right-click save as)
-        window.open(currentImgUrl, "_blank");
-      }
-      
-      // optional subtle animation on download button (just feel)
-      const btn = downloadBtn;
+
+      var btn = downloadBtn;
+      var originalText = btn.innerHTML;
       btn.style.transform = "scale(0.96)";
-      setTimeout(() => { btn.style.transform = ""; }, 150);
+      setTimeout(function() { btn.style.transform = ""; }, 150);
+
+      var proxyUrl = "https://proxydownload.onrender.com/download?url=" + encodeURIComponent(currentImgUrl);
+      try {
+        btn.innerHTML = "⏳ Downloading...";
+        btn.disabled = true;
+
+        var response = await fetch(proxyUrl);
+        if (!response.ok) throw new Error("Proxy fetch failed");
+        var blob = await response.blob();
+        var blobUrl = URL.createObjectURL(blob);
+        var link = document.createElement("a");
+        link.href = blobUrl;
+        var fileName = currentImgUrl.split("/").pop() || "waifu_image.jpg";
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+      } catch (err) {
+        console.error("Download failed:", err);
+        alert("Download failed. Opening original image in new tab.");
+        window.open(currentImgUrl, "_blank");
+      } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
     }
 
-    // Preload initial image on page load (avoid duplicates)
+    // Khởi tạo trang
     async function init() {
       setLoading(true);
       try {
-        // first image, lastDisplayed is empty so no duplicate check needed
-        let firstUrl = await fetchWaifuImage(null, 0);
+        var firstUrl = await fetchWaifuImage(null);
         if (!firstUrl) firstUrl = getRandomFallback();
         currentImgUrl = firstUrl;
         lastDisplayedUrl = firstUrl;
         imgElement.src = firstUrl;
-        // wait for image load or just set
-        await new Promise((resolve) => {
+        // Đợi ảnh load hoặc lỗi
+        await new Promise(function(resolve) {
           if (imgElement.complete) resolve();
-          else imgElement.onload = resolve;
-          imgElement.onerror = resolve;
+          else {
+            imgElement.onload = resolve;
+            imgElement.onerror = resolve;
+          }
         });
       } catch (e) {
-        const fallback = getRandomFallback();
+        console.error("Init error:", e);
+        var fallback = getRandomFallback();
         currentImgUrl = fallback;
         lastDisplayedUrl = fallback;
         imgElement.src = fallback;
@@ -510,15 +496,12 @@
       }
     }
 
-    // attach event listeners
-    newBtn.addEventListener("click", () => {
-      loadNewWaifu();
+    // Gán sự kiện sau khi DOM ready (an toàn hơn)
+    window.addEventListener("DOMContentLoaded", function() {
+      newBtn.addEventListener("click", loadNewWaifu);
+      downloadBtn.addEventListener("click", downloadImage);
+      init();
     });
-
-    downloadBtn.addEventListener("click", downloadImage);
-
-    // start everything
-    init();
   })();
 </script>
 </body>
