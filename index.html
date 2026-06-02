@@ -2,108 +2,524 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Random Waifu</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Waifu Canvas | Random Anime Art</title>
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
-  <meta name="theme-color" content="#111">
-  <script>
-    let currentImgUrl = "";
-
-    async function newWaifu() {
-      const apis = [
-        "https://api.waifu.im/search?included_tags=maid",
-        "https://api.waifu.pics/sfw/waifu",
-        "https://nekos.best/api/v2/waifu",
-        "https://api.waifu.im/search?included_tags=waifu"
-      ];
-
-      const fallbacks = [
-        "https://nekos.best/api/v2/neko/89ad0c09-112f-4111-9b86-5131b1e6d6ca.png",
-        "https://nekos.best/api/v2/neko/bf5e4463-1458-445d-8118-9d0064dce802.png",
-        "https://nekos.best/api/v2/neko/5005b597-1181-4a23-8517-f5a6b0855b82.png",
-        "https://nekos.best/api/v2/neko/cb5efb0e-2a5a-4307-851a-cc95dfdd165a.png",
-        "https://nekos.best/api/v2/neko/25df335c-f4f9-4975-9b18-47938c55c1d1.png"
-      ];
-
-      const url = apis[Math.floor(Math.random() * apis.length)];
-      try {
-        let res = await fetch(url);
-        let data = await res.json();
-        let imgUrl =
-          data.images?.[0]?.url ||
-          data.url ||
-          data.results?.[0]?.url;
-
-        if (!imgUrl) throw new Error("No image");
-        currentImgUrl = imgUrl;
-        document.getElementById("waifu").src = imgUrl;
-      } catch {
-        const fallback = fallbacks[Math.floor(Math.random() * fallbacks.length)];
-        currentImgUrl = fallback;
-        document.getElementById("waifu").src = fallback;
-      }
-    }
-
-    function downloadWaifu() {
-      if (!currentImgUrl) return;
-      const proxy = "https://proxydownload.onrender.com/download?url=";
-      window.open(proxy + encodeURIComponent(currentImgUrl), "_blank");
-    }
-
-    window.onload = newWaifu;
-  </script>
+  <meta name="theme-color" content="#1a1a2e">
+  <!-- Google Fonts for modern typography -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,500;14..32,700&display=swap" rel="stylesheet">
   <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
+      min-height: 100vh;
+      background: radial-gradient(circle at 20% 30%, #0f0c1f, #03010a);
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      position: relative;
+    }
+
+    /* glassmorphic card container */
+    .card {
+      background: rgba(18, 16, 32, 0.65);
+      backdrop-filter: blur(12px);
+      border-radius: 2.5rem;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 25px 45px rgba(0, 0, 0, 0.5), 0 0 0 0.5px rgba(255, 255, 255, 0.05);
+      padding: 2rem 1.5rem 1.8rem;
+      width: 100%;
+      max-width: 1000px;
+      transition: all 0.3s ease;
+    }
+
+    /* header area */
+    .header {
+      text-align: center;
+      margin-bottom: 1.8rem;
+    }
+
+    .header h1 {
+      font-size: clamp(1.8rem, 6vw, 2.8rem);
+      font-weight: 700;
+      background: linear-gradient(135deg, #FFB6F0, #D96CFF, #FF8A5C);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+      letter-spacing: -0.02em;
+      text-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    .sub {
+      color: #b9b3e6;
+      font-size: 0.85rem;
+      font-weight: 400;
+      margin-top: 6px;
+      opacity: 0.8;
+    }
+
+    /* image wrapper & loading overlay */
+    .image-container {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #0b0918;
+      border-radius: 1.8rem;
+      overflow: hidden;
+      box-shadow: 0 20px 35px -10px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+      margin-bottom: 1.5rem;
+      min-height: 320px;
+    }
+
+    #waifu {
+      width: 100%;
+      max-height: 65vh;
+      object-fit: contain;
+      display: block;
+      transition: opacity 0.25s ease-in-out;
+      opacity: 1;
+      background: #05030f;
+    }
+
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(8, 6, 20, 0.85);
+      backdrop-filter: blur(6px);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 100vh;
-      margin: 0;
-      background: #111;
-      color: #fff;
-      font-family: Arial, sans-serif;
+      gap: 1rem;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s ease;
+      border-radius: 1.8rem;
+      z-index: 10;
     }
-    h1 {
-      margin: 20px 0;
+
+    .loading-overlay.active {
+      opacity: 1;
+      visibility: visible;
     }
-    #waifu {
-      max-width: 90vw;
-      max-height: 80vh;
-      border-radius: 16px;
-      box-shadow: 0 0 20px #555;
-      object-fit: contain;
+
+    .spinner {
+      width: 52px;
+      height: 52px;
+      border: 4px solid rgba(255, 110, 180, 0.25);
+      border-top: 4px solid #ff6eb4;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
     }
-    .top-buttons {
-      position: absolute;
-      top: 20px;
-      right: 20px;
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      color: #ffd9f0;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+    }
+
+    /* button panel */
+    .button-group {
       display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 0.8rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       gap: 10px;
-    }
-    button {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 12px;
-      background: #ff4da6;
-      color: #fff;
-      font-size: 16px;
+      background: rgba(25, 22, 45, 0.9);
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 0.8rem 1.8rem;
+      border-radius: 3rem;
+      font-weight: 600;
+      font-size: 0.95rem;
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-      transition: 0.2s;
+      transition: all 0.2s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+      color: #f2eaff;
+      letter-spacing: 0.3px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
-    button:hover {
-      background: #ff3399;
-      transform: scale(1.05);
+
+    .btn-primary {
+      background: linear-gradient(105deg, #e84393, #c7417b);
+      border: none;
+      box-shadow: 0 8px 20px rgba(232, 67, 147, 0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-3px);
+      background: linear-gradient(105deg, #ff5e9e, #e84393);
+      box-shadow: 0 12px 28px rgba(232, 67, 147, 0.5);
+    }
+
+    .btn-secondary {
+      background: rgba(35, 32, 60, 0.85);
+      border: 1px solid rgba(255, 140, 190, 0.5);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(55, 48, 90, 0.95);
+      transform: translateY(-2px);
+      border-color: #ff95c8;
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    /* status / info line */
+    .info-bar {
+      display: flex;
+      justify-content: center;
+      margin-top: 1.5rem;
+      font-size: 0.75rem;
+      color: #b1aad9;
+      gap: 12px;
+      flex-wrap: wrap;
+      border-top: 1px dashed rgba(255,255,255,0.1);
+      padding-top: 1rem;
+    }
+
+    .badge {
+      background: rgba(0,0,0,0.4);
+      border-radius: 30px;
+      padding: 0.2rem 0.8rem;
+      font-family: monospace;
+      font-size: 0.7rem;
+    }
+
+    @media (max-width: 560px) {
+      .card {
+        padding: 1.2rem;
+      }
+      .btn {
+        padding: 0.6rem 1.2rem;
+        font-size: 0.85rem;
+      }
+      .button-group {
+        gap: 0.7rem;
+      }
+    }
+
+    /* smooth image transition */
+    .fade-out {
+      opacity: 0 !important;
     }
   </style>
 </head>
 <body>
-  <h1>✨ Waifu Generator ✨</h1>
-  <div class="top-buttons">
-    <button onclick="newWaifu()">➡️ New Waifu</button>
-    <button onclick="downloadWaifu()">⬇️ Download</button>
+
+<div class="card">
+  <div class="header">
+    <h1>✨ waifu · muse ✨</h1>
+    <div class="sub">ethereal anime art, infinite & elegant</div>
   </div>
-  <img id="waifu" src="">
+
+  <div class="image-container">
+    <img id="waifu" src="" alt="anime waifu art">
+    <div id="loadingOverlay" class="loading-overlay">
+      <div class="spinner"></div>
+      <div class="loading-text">summoning waifu...</div>
+    </div>
+  </div>
+
+  <div class="button-group">
+    <button class="btn btn-primary" id="newBtn">🎴 New Waifu</button>
+    <button class="btn btn-secondary" id="downloadBtn">⬇️ Download</button>
+  </div>
+
+  <div class="info-bar">
+    <span>✨ from multi-source anime APIs</span>
+    <span class="badge">no duplicate spam</span>
+  </div>
+</div>
+
+<script>
+  (function() {
+    // ---------- CONFIGURATION ----------
+    // API endpoints with custom parsing logic
+    const API_LIST = [
+      {
+        // waifu.im (maid themed, but returns multiple)
+        fetcher: async () => {
+          const url = "https://api.waifu.im/search?included_tags=maid&height=<=1200";
+          const res = await fetch(url);
+          const data = await res.json();
+          if (data.images && Array.isArray(data.images) && data.images.length) {
+            // pick random image from the returned array for variety
+            const randomIndex = Math.floor(Math.random() * data.images.length);
+            return data.images[randomIndex].url;
+          }
+          throw new Error("No image from waifu.im");
+        }
+      },
+      {
+        // waifu.pics (simple sfw)
+        fetcher: async () => {
+          const url = "https://api.waifu.pics/sfw/waifu";
+          const res = await fetch(url);
+          const data = await res.json();
+          if (data.url) return data.url;
+          throw new Error("No image from waifu.pics");
+        }
+      },
+      {
+        // nekos.best
+        fetcher: async () => {
+          const url = "https://nekos.best/api/v2/waifu";
+          const res = await fetch(url);
+          const data = await res.json();
+          if (data.results && data.results.length && data.results[0].url) {
+            return data.results[0].url;
+          }
+          throw new Error("No image from nekos.best");
+        }
+      },
+      {
+        // waifu.im fallback style (waifu without maid tag, extra variety)
+        fetcher: async () => {
+          const url = "https://api.waifu.im/search?included_tags=waifu&height=<=1200";
+          const res = await fetch(url);
+          const data = await res.json();
+          if (data.images && Array.isArray(data.images) && data.images.length) {
+            const randomIndex = Math.floor(Math.random() * data.images.length);
+            return data.images[randomIndex].url;
+          }
+          throw new Error("No image from waifu.im generic");
+        }
+      }
+    ];
+
+    // Robust offline fallbacks (rare case all APIs fail)
+    const FALLBACK_IMAGE_POOL = [
+      "https://nekos.best/api/v2/neko/89ad0c09-112f-4111-9b86-5131b1e6d6ca.png",
+      "https://nekos.best/api/v2/neko/bf5e4463-1458-445d-8118-9d0064dce802.png",
+      "https://nekos.best/api/v2/neko/5005b597-1181-4a23-8517-f5a6b0855b82.png",
+      "https://nekos.best/api/v2/neko/cb5efb0e-2a5a-4307-851a-cc95dfdd165a.png",
+      "https://nekos.best/api/v2/neko/25df335c-f4f9-4975-9b18-47938c55c1d1.png"
+    ];
+
+    // DOM elements
+    const imgElement = document.getElementById("waifu");
+    const newBtn = document.getElementById("newBtn");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const loadingOverlay = document.getElementById("loadingOverlay");
+
+    // State
+    let currentImgUrl = "";
+    let lastDisplayedUrl = "";     // used for duplicate avoidance
+    let isFetching = false;
+
+    // Helper: show/hide loading overlay
+    function setLoading(loading) {
+      if (loading) {
+        loadingOverlay.classList.add("active");
+      } else {
+        loadingOverlay.classList.remove("active");
+      }
+    }
+
+    // Fade transition for image (smooth replace)
+    function setImageWithFade(newUrl) {
+      return new Promise((resolve) => {
+        if (!imgElement) return resolve();
+        // add fade-out class
+        imgElement.classList.add("fade-out");
+        setTimeout(() => {
+          imgElement.src = newUrl;
+          imgElement.onload = () => {
+            imgElement.classList.remove("fade-out");
+            resolve();
+          };
+          imgElement.onerror = () => {
+            // if error, still remove class to avoid permanent fade
+            imgElement.classList.remove("fade-out");
+            resolve();
+          };
+        }, 120);
+      });
+    }
+
+    // get random fallback image
+    function getRandomFallback() {
+      const randomIndex = Math.floor(Math.random() * FALLBACK_IMAGE_POOL.length);
+      return FALLBACK_IMAGE_POOL[randomIndex];
+    }
+
+    // core fetch: tries random API endpoints, avoid repeating same url as lastDisplayedUrl
+    async function fetchWaifuImage(avoidUrl = null, attempt = 0) {
+      const MAX_ATTEMPTS = 5;
+      // create a shuffled copy of API list to call in random order
+      const shuffled = [...API_LIST];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+
+      // try each API endpoint until one succeeds
+      for (let idx = 0; idx < shuffled.length; idx++) {
+        try {
+          const api = shuffled[idx];
+          const imgUrl = await api.fetcher();
+          if (imgUrl && typeof imgUrl === "string" && imgUrl.startsWith("http")) {
+            // avoid duplicate consecutive image (if avoidUrl exists and matches)
+            if (avoidUrl && imgUrl === avoidUrl) {
+              console.log("duplicate avoided, retry different api");
+              continue;  // skip this image, try next API
+            }
+            return imgUrl;
+          }
+        } catch (err) {
+          console.warn(`API error (${idx}):`, err);
+          // continue to next API
+        }
+      }
+
+      // if all APIs failed, fallback but still avoid last displayed image if possible
+      if (attempt < 2) {
+        // try one more time with full random endpoints and ignore avoid? but use fallback images
+        const fallbackImg = getRandomFallback();
+        if (avoidUrl && fallbackImg === avoidUrl) {
+          // if fallback still same as last, pick another from pool
+          for (let f of FALLBACK_IMAGE_POOL) {
+            if (f !== avoidUrl) return f;
+          }
+        }
+        return fallbackImg;
+      }
+      return getRandomFallback();
+    }
+
+    // Main routine: get new waifu with anti-duplicate logic
+    async function loadNewWaifu() {
+      if (isFetching) return;
+      isFetching = true;
+      setLoading(true);
+
+      try {
+        // we attempt to avoid getting the exact same URL as currentImgUrl (last displayed)
+        let newUrl = await fetchWaifuImage(lastDisplayedUrl, 0);
+        
+        // extra safety: if for some reason newUrl still equals lastDisplayedUrl (very rare)
+        // perform one more explicit retry using different approach
+        if (newUrl === lastDisplayedUrl && lastDisplayedUrl !== "") {
+          console.log("rare duplicate again, forcing re-fetch with extended pool");
+          // try to fetch again, but now we temporarily ignore avoid to get any new one?
+          for (let i = 0; i < FALLBACK_IMAGE_POOL.length; i++) {
+            if (FALLBACK_IMAGE_POOL[i] !== lastDisplayedUrl) {
+              newUrl = FALLBACK_IMAGE_POOL[i];
+              break;
+            }
+          }
+        }
+        
+        // update state and image
+        currentImgUrl = newUrl;
+        await setImageWithFade(newUrl);
+        lastDisplayedUrl = newUrl;
+      } catch (err) {
+        console.error("critical error in loading waifu", err);
+        // ultimate fallback: show a random fallback image that is not the same if possible
+        let emergencyUrl = getRandomFallback();
+        if (emergencyUrl === lastDisplayedUrl) {
+          for (let alt of FALLBACK_IMAGE_POOL) {
+            if (alt !== lastDisplayedUrl) {
+              emergencyUrl = alt;
+              break;
+            }
+          }
+        }
+        currentImgUrl = emergencyUrl;
+        await setImageWithFade(emergencyUrl);
+        lastDisplayedUrl = emergencyUrl;
+      } finally {
+        setLoading(false);
+        isFetching = false;
+      }
+    }
+
+    // Download functionality with cross-origin proxy & better UX
+    function downloadImage() {
+      if (!currentImgUrl) {
+        console.warn("no image loaded");
+        return;
+      }
+      
+      // show a small user feedback (we don't have toast, but just open proxy in new tab)
+      // Use our proxy endpoint to avoid CORS download issues, but if proxy fails, open raw image in new tab.
+      const proxyUrl = `https://proxydownload.onrender.com/download?url=${encodeURIComponent(currentImgUrl)}`;
+      
+      // we open a new tab with proxy - user can save or right-click. Better than nothing.
+      const downloadWindow = window.open(proxyUrl, "_blank");
+      if (!downloadWindow) {
+        // fallback: just open raw image in new tab (user can right-click save as)
+        window.open(currentImgUrl, "_blank");
+      }
+      
+      // optional subtle animation on download button (just feel)
+      const btn = downloadBtn;
+      btn.style.transform = "scale(0.96)";
+      setTimeout(() => { btn.style.transform = ""; }, 150);
+    }
+
+    // Preload initial image on page load (avoid duplicates)
+    async function init() {
+      setLoading(true);
+      try {
+        // first image, lastDisplayed is empty so no duplicate check needed
+        let firstUrl = await fetchWaifuImage(null, 0);
+        if (!firstUrl) firstUrl = getRandomFallback();
+        currentImgUrl = firstUrl;
+        lastDisplayedUrl = firstUrl;
+        imgElement.src = firstUrl;
+        // wait for image load or just set
+        await new Promise((resolve) => {
+          if (imgElement.complete) resolve();
+          else imgElement.onload = resolve;
+          imgElement.onerror = resolve;
+        });
+      } catch (e) {
+        const fallback = getRandomFallback();
+        currentImgUrl = fallback;
+        lastDisplayedUrl = fallback;
+        imgElement.src = fallback;
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // attach event listeners
+    newBtn.addEventListener("click", () => {
+      loadNewWaifu();
+    });
+
+    downloadBtn.addEventListener("click", downloadImage);
+
+    // start everything
+    init();
+  })();
+</script>
 </body>
 </html>
