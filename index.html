@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Waifu Generator | Ultra-Fast Preload</title>
+  <title>Waifu Generator | Safari Stable</title>
   <link rel="icon" type="image/png" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23ff4da6'/%3E%3Ctext x='50' y='70' text-anchor='middle' fill='white' font-size='50' font-family='monospace'%3E❤%3C/text%3E%3C/svg%3E">
   <meta name="theme-color" content="#111">
   <style>
@@ -26,7 +26,7 @@
 <body>
 <div class="generator">
   <h1>🌸 Waifu Generator 🌸</h1>
-  <div class="sub">✨ random anime art — instant preload ✨</div>
+  <div class="sub">✨ random anime art — fast & stable ✨</div>
   <div class="image-frame">
     <img id="waifu" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23222'%3E%3C/rect%3E%3Ctext x='50' y='55' font-size='12' fill='%23aaa' text-anchor='middle'%3ELoading...%3C/text%3E%3C/svg%3E" alt="Anime waifu image" style="width:100%">
   </div>
@@ -39,73 +39,92 @@
 
 <script>
 (function() {
-  // ======================== TỐI ƯU TỐC ĐỘ ========================
-  // 1. Preload ảnh tiếp theo (next image) ngay sau khi hiển thị ảnh hiện tại
-  // 2. Dùng Image() decode() để tránh giật/lag khi hiển thị
-  // 3. Giảm timeout và tăng tốc fallback
-  // 4. Xử lý song song: lấy URL và preload ảnh đồng thời
-
+  // Hàm chờ DOM ready
   function ready(fn) {
     if (document.readyState !== 'loading') fn();
     else document.addEventListener('DOMContentLoaded', fn);
   }
 
   ready(async function() {
-    const img = document.getElementById('waifu');
-    const newBtn = document.getElementById('newBtn');
-    const downloadBtn = document.getElementById('downloadBtn');
+    var img = document.getElementById('waifu');
+    var newBtn = document.getElementById('newBtn');
+    var downloadBtn = document.getElementById('downloadBtn');
 
     if (!img || !newBtn || !downloadBtn) {
-      console.error('Missing elements');
+      console.error('Missing DOM elements');
       return;
     }
 
-    // ---------- API list (giống cũ, nhưng thêm nekos.moe nhanh hơn) ----------
-    const API_LIST = [
+    // ---------- API list – KHÔNG dùng optional chaining, an toàn với Safari cũ ----------
+    var API_LIST = [
       {
         name: 'waifu.im_maid',
         url: 'https://api.waifu.im/search?included_tags=maid&height=%3C=1200',
-        extract: (data) => data?.images?.[0]?.url || null
+        extract: function(data) {
+          if (data && data.images && data.images[0] && typeof data.images[0].url === 'string') {
+            return data.images[0].url;
+          }
+          return null;
+        }
       },
       {
         name: 'waifu.im_waifu',
         url: 'https://api.waifu.im/search?included_tags=waifu&height=%3C=1200',
-        extract: (data) => data?.images?.[0]?.url || null
+        extract: function(data) {
+          if (data && data.images && data.images[0] && typeof data.images[0].url === 'string') {
+            return data.images[0].url;
+          }
+          return null;
+        }
       },
       {
         name: 'waifu.pics',
         url: 'https://api.waifu.pics/sfw/waifu',
-        extract: (data) => data?.url || null
+        extract: function(data) {
+          if (data && typeof data.url === 'string') return data.url;
+          return null;
+        }
       },
       {
         name: 'nekos.best',
         url: 'https://nekos.best/api/v2/waifu',
-        extract: (data) => data?.results?.[0]?.url || null
+        extract: function(data) {
+          if (data && data.results && data.results[0] && typeof data.results[0].url === 'string') {
+            return data.results[0].url;
+          }
+          return null;
+        }
       },
       {
         name: 'nekos.best_neko',
         url: 'https://nekos.best/api/v2/neko',
-        extract: (data) => data?.results?.[0]?.url || null
+        extract: function(data) {
+          if (data && data.results && data.results[0] && typeof data.results[0].url === 'string') {
+            return data.results[0].url;
+          }
+          return null;
+        }
       }
     ];
 
-    let currentUrl = '';
-    let lastUrl = '';
-    let isLoading = false;
+    var currentUrl = '';
+    var lastUrl = '';
+    var isLoading = false;
 
-    // ---------- Preload next image ----------
-    let preloadedUrl = '';
-    let preloadedImage = null;      // Image object đã tải xong
-    let isPreloading = false;
+    // Preload next image
+    var preloadedUrl = '';
+    var preloadedImage = null;
+    var isPreloading = false;
 
-    // Hàm fetch API với timeout ngắn hơn (3s thay vì 5-6s)
-    function fetchTimeout(url, ms = 3000) {
-      return new Promise((resolve, reject) => {
-        const timer = setTimeout(() => reject(new Error('Timeout')), ms);
-        fetch(url).then(res => {
+    // Fetch với timeout (tăng lên 5s cho ổn định)
+    function fetchTimeout(url, ms) {
+      ms = ms || 5000;
+      return new Promise(function(resolve, reject) {
+        var timer = setTimeout(function() { reject(new Error('Timeout')); }, ms);
+        fetch(url).then(function(res) {
           clearTimeout(timer);
           resolve(res);
-        }).catch(err => {
+        }).catch(function(err) {
           clearTimeout(timer);
           reject(err);
         });
@@ -113,110 +132,111 @@
     }
 
     function shuffle(arr) {
-      const a = [...arr];
-      for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
+      var a = arr.slice();
+      for (var i = a.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = a[i];
+        a[i] = a[j];
+        a[j] = tmp;
       }
       return a;
     }
 
-    // Lấy URL từ API (thử dần, có retry)
-    async function fetchUniqueUrl(avoidUrl, retries = 2) {
-      for (let attempt = 0; attempt <= retries; attempt++) {
-        const apis = shuffle(API_LIST);
-        for (const api of apis) {
+    // Lấy URL từ API – thử từng cái, không dùng Promise.any
+    async function fetchUniqueUrl(avoidUrl, retries) {
+      retries = retries !== undefined ? retries : 2;
+      var lastError = null;
+      for (var attempt = 0; attempt <= retries; attempt++) {
+        var apis = shuffle(API_LIST);
+        for (var i = 0; i < apis.length; i++) {
+          var api = apis[i];
           try {
-            const res = await fetchTimeout(api.url, 3000);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = await res.json();
-            let url = api.extract(data);
-            if (!url || typeof url !== 'string' || !url.startsWith('http')) continue;
-            if (url === avoidUrl || url === lastUrl) continue;
+            var res = await fetchTimeout(api.url, 5000);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            var data = await res.json();
+            var url = api.extract(data);
+            if (!url || typeof url !== 'string' || url.indexOf('http') !== 0) {
+              throw new Error('Invalid URL');
+            }
+            if (url === avoidUrl || url === lastUrl) {
+              throw new Error('Duplicate');
+            }
             return url;
           } catch (e) {
+            lastError = e;
             // thử tiếp API khác
           }
         }
-        if (attempt < retries) await new Promise(r => setTimeout(r, 300));
+        if (attempt < retries) await new Promise(function(r) { setTimeout(r, 400); });
       }
-      throw new Error('All APIs failed');
+      throw new Error('All APIs failed: ' + (lastError ? lastError.message : 'unknown'));
     }
 
-    // Preload một URL bằng Image object + decode
-    async function preloadImage(url) {
-      if (!url) return null;
-      const imgObj = new Image();
-      imgObj.crossOrigin = 'Anonymous';
-      // Hứa hẹn khi ảnh được tải và decode hoàn tất
-      return new Promise((resolve, reject) => {
-        imgObj.onload = () => {
-          // decode giúp trình duyệt giải mã ảnh trước, tránh giật khi hiển thị
+    // Preload ảnh
+    function preloadImage(url) {
+      if (!url) return Promise.reject(new Error('No URL'));
+      return new Promise(function(resolve, reject) {
+        var imgObj = new Image();
+        imgObj.crossOrigin = 'Anonymous';
+        imgObj.onload = function() {
           if (imgObj.decode) {
-            imgObj.decode().then(() => resolve(imgObj)).catch(() => resolve(imgObj));
+            imgObj.decode().then(function() { resolve(imgObj); }).catch(function() { resolve(imgObj); });
           } else {
             resolve(imgObj);
           }
         };
-        imgObj.onerror = () => reject(new Error('Preload failed'));
-        imgObj.src = url + (url.includes('?') ? '&' : '?') + '_pre=' + Date.now();
+        imgObj.onerror = function() { reject(new Error('Preload failed')); };
+        var sep = url.indexOf('?') === -1 ? '?' : '&';
+        imgObj.src = url + sep + '_pre=' + Date.now();
       });
     }
 
-    // Preload ảnh tiếp theo (bất đồng bộ, không chặn UI)
     async function startPreload() {
       if (isPreloading) return;
       isPreloading = true;
       try {
-        // Lấy URL mới (không trùng với currentUrl và lastUrl)
-        const nextUrl = await fetchUniqueUrl(currentUrl, 1);
+        var nextUrl = await fetchUniqueUrl(currentUrl, 1);
         if (nextUrl && nextUrl !== preloadedUrl) {
-          const loadedImg = await preloadImage(nextUrl);
-          if (loadedImg) {
-            preloadedUrl = nextUrl;
-            preloadedImage = loadedImg;
-          }
+          var loadedImg = await preloadImage(nextUrl);
+          preloadedUrl = nextUrl;
+          preloadedImage = loadedImg;
         }
       } catch (e) {
-        // im lặng, lần sau sẽ preload lại
+        // bỏ qua lỗi preload
       } finally {
         isPreloading = false;
       }
     }
 
-    // Hiển thị ảnh với decode() để mượt mà
-    async function displayImage(url, usePreload = false) {
+    async function displayImage(url, usePreload) {
       if (!url) return false;
-      let imageToShow = null;
+      var imgToShow = null;
       if (usePreload && preloadedUrl === url && preloadedImage) {
-        imageToShow = preloadedImage;
-        // Xóa preload đã dùng
+        imgToShow = preloadedImage;
         preloadedUrl = '';
         preloadedImage = null;
       }
-      if (imageToShow) {
-        // Gán trực tiếp từ Image object đã tải
-        img.src = imageToShow.src;
+      if (imgToShow) {
+        img.src = imgToShow.src;
         img.alt = 'Waifu artwork';
         if (img.decode) await img.decode();
         return true;
       } else {
-        // Fallback: load thường
-        return new Promise((resolve) => {
-          const tempImg = new Image();
+        return new Promise(function(resolve) {
+          var tempImg = new Image();
           tempImg.crossOrigin = 'Anonymous';
-          tempImg.onload = async () => {
+          tempImg.onload = async function() {
             img.src = tempImg.src;
             if (img.decode) await img.decode();
             resolve(true);
           };
-          tempImg.onerror = () => resolve(false);
-          tempImg.src = url + (url.includes('?') ? '&' : '?') + '_cb=' + Date.now();
+          tempImg.onerror = function() { resolve(false); };
+          var sep = url.indexOf('?') === -1 ? '?' : '&';
+          tempImg.src = url + sep + '_cb=' + Date.now();
         });
       }
     }
 
-    // UI loading
     function setLoading(loading) {
       isLoading = loading;
       if (!img || !newBtn || !downloadBtn) return;
@@ -235,9 +255,9 @@
       }
     }
 
-    function toast(msg, isError = false) {
+    function toast(msg, isError) {
       if (!document.body) return;
-      const div = document.createElement('div');
+      var div = document.createElement('div');
       div.textContent = msg;
       div.style.position = 'fixed';
       div.style.bottom = '20px';
@@ -249,44 +269,40 @@
       div.style.borderRadius = '30px';
       div.style.textAlign = 'center';
       div.style.fontSize = '0.85rem';
-      div.style.zIndex = '999';
+      div.style.zIndex = '9999';
       div.style.fontWeight = 'bold';
       div.style.backdropFilter = 'blur(4px)';
       document.body.appendChild(div);
-      setTimeout(() => div.remove(), 2500);
+      setTimeout(function() { if (div && div.remove) div.remove(); }, 2500);
     }
 
-    // Hàm chính: lấy ảnh mới (ưu tiên preload nếu có)
     async function newWaifu() {
       if (isLoading) return;
       setLoading(true);
       try {
-        let url = null;
-        let usedPreload = false;
-        // Nếu có preload sẵn và không trùng với hiện tại
+        var url = null;
+        var usedPreload = false;
         if (preloadedUrl && preloadedImage && preloadedUrl !== currentUrl) {
           url = preloadedUrl;
           usedPreload = true;
-          toast('⚡ Instant from preload', false);
+          toast('⚡ Instant preload', false);
         } else {
-          // Chủ động lấy URL mới
           url = await fetchUniqueUrl(currentUrl, 2);
           if (!url) throw new Error('No URL');
         }
         if (url === currentUrl) {
-          // Trường hợp trùng lặp, thử lại một lần nữa
           url = await fetchUniqueUrl(currentUrl, 2);
           if (!url) throw new Error('No URL after dedup');
         }
-        const success = await displayImage(url, usedPreload);
+        var success = await displayImage(url, usedPreload);
         if (!success) throw new Error('Display failed');
         currentUrl = url;
         lastUrl = currentUrl;
-        // Sau khi hiển thị xong, lập tức preload ảnh tiếp theo (không chờ)
-        startPreload().catch(e => console.warn('Preload bg failed', e));
+        // Preload ảnh tiếp theo (không await để không chặn)
+        startPreload().catch(function(e) { console.warn('Preload error', e); });
       } catch (err) {
-        console.error(err);
-        toast('⚠️ Failed to load, tap again', true);
+        console.error('newWaifu error:', err);
+        toast('⚠️ ' + (err.message || 'Failed to load image'), true);
         if (!currentUrl) {
           img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23222"%3E%3C/rect%3E%3Ctext x="50" y="55" font-size="12" fill="%23aaa" text-anchor="middle"%3E✨ click new ✨%3C/text%3E%3C/svg%3E';
         }
@@ -295,37 +311,40 @@
       }
     }
 
-    // Download vẫn giữ nguyên logic cũ (đã tối ưu)
     async function downloadImage() {
       if (!currentUrl) {
-        toast('No image yet. Generate one!', true);
+        toast('No image to download', true);
         return;
       }
       try {
-        toast('⬇️ Downloading...');
-        const resp = await fetch(currentUrl, { credentials: 'omit', mode: 'cors' });
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const blob = await resp.blob();
-        if (!blob.size) throw new Error('Empty');
-        const blobUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        toast('⬇️ Downloading...', false);
+        var resp = await fetch(currentUrl, { credentials: 'omit', mode: 'cors' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        var blob = await resp.blob();
+        if (!blob || blob.size === 0) throw new Error('Empty blob');
+        var blobUrl = URL.createObjectURL(blob);
+        var a = document.createElement('a');
         a.href = blobUrl;
-        a.download = `waifu_${Date.now()}.jpg`;
+        a.download = 'waifu_' + Date.now() + '.jpg';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(blobUrl);
-        toast('✅ Saved');
+        toast('✅ Saved', false);
       } catch (e) {
-        window.open(currentUrl, '_blank');
-        toast('⚠️ Opened in new tab', true);
+        if (currentUrl && currentUrl.indexOf('http') === 0) {
+          window.open(currentUrl, '_blank');
+          toast('⚠️ Opened in new tab', true);
+        } else {
+          toast('❌ Cannot download', true);
+        }
       }
     }
 
     newBtn.addEventListener('click', newWaifu);
     downloadBtn.addEventListener('click', downloadImage);
 
-    // Load ảnh đầu tiên + preload ngay sau đó
+    // Bắt đầu lấy ảnh đầu tiên
     await newWaifu();
   });
 })();
