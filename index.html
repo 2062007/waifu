@@ -3,33 +3,32 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Waifu Generator | Random Anime Art (Safari Fixed)</title>
+  <title>Waifu Generator | Safari Optimized</title>
   <link rel="icon" type="image/png" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23ff4da6'/%3E%3Ctext x='50' y='70' text-anchor='middle' fill='white' font-size='50' font-family='monospace'%3E❤%3C/text%3E%3C/svg%3E">
   <meta name="theme-color" content="#111">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { min-height: 100vh; background: linear-gradient(145deg, #0a0a0a 0%, #1a1a2e 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: system-ui, 'Segoe UI', 'Helvetica Neue', sans-serif; padding: 20px; }
-    .generator { background: rgba(20, 20, 30, 0.7); backdrop-filter: blur(2px); border-radius: 2rem; padding: 1.5rem; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05); width: 100%; max-width: 1000px; transition: all 0.2s ease; }
-    h1 { text-align: center; font-weight: 700; font-size: clamp(1.8rem, 6vw, 2.8rem); letter-spacing: -0.5px; background: linear-gradient(135deg, #ffb347, #ff4da6); -webkit-background-clip: text; background-clip: text; color: transparent; margin-bottom: 1rem; text-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+    .generator { background: rgba(20, 20, 30, 0.85); border-radius: 2rem; padding: 1.5rem; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5); width: 100%; max-width: 1000px; }
+    h1 { text-align: center; font-weight: 700; font-size: clamp(1.8rem, 6vw, 2.8rem); letter-spacing: -0.5px; background: linear-gradient(135deg, #ffb347, #ff4da6); -webkit-background-clip: text; background-clip: text; color: transparent; margin-bottom: 1rem; }
     .sub { text-align: center; color: #aaa; margin-bottom: 1.5rem; font-size: 0.9rem; }
-    .image-frame { background: #00000055; border-radius: 28px; padding: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); margin-bottom: 1.5rem; }
+    .image-frame { background: #00000066; border-radius: 28px; padding: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); margin-bottom: 1.5rem; }
     #waifu { width: 100%; max-height: 65vh; object-fit: contain; border-radius: 20px; display: block; background: #0f0f12; transition: opacity 0.2s; }
     .loading { opacity: 0.6; }
     .button-bar { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px; margin-top: 0.5rem; }
-    button { background: #ff4da6; border: none; padding: 12px 28px; font-size: 1.1rem; font-weight: 600; border-radius: 50px; color: white; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3); letter-spacing: 0.5px; }
-    button:hover { background: #ff2b8c; transform: scale(1.02); box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4); }
+    button { background: #ff4da6; border: none; padding: 12px 28px; font-size: 1.1rem; font-weight: 600; border-radius: 50px; color: white; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3); }
+    button:hover { background: #ff2b8c; transform: scale(1.02); }
     button:active { transform: scale(0.98); }
     .credit { margin-top: 25px; font-size: 0.75rem; color: #666; text-align: center; }
     @media (max-width: 550px) { .generator { padding: 1rem; } button { padding: 8px 20px; font-size: 0.9rem; } .button-bar { gap: 12px; } }
   </style>
 </head>
 <body>
-
 <div class="generator">
   <h1>🌸 Waifu Generator 🌸</h1>
   <div class="sub">✨ random anime art — no repeats, always fresh ✨</div>
   <div class="image-frame">
-    <img id="waifu" src="" alt="Anime waifu image" style="width:100%">
+    <img id="waifu" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23222'%3E%3C/rect%3E%3Ctext x='50' y='55' font-size='12' fill='%23aaa' text-anchor='middle'%3ELoading...%3C/text%3E%3C/svg%3E" alt="Anime waifu image" style="width:100%">
   </div>
   <div class="button-bar">
     <button id="newBtn">🔄 New Waifu</button>
@@ -39,256 +38,231 @@
 </div>
 
 <script>
-  (function() {
-    // ---------- DOM elements ----------
-    var imgElement = document.getElementById('waifu');
-    var newBtn = document.getElementById('newBtn');
-    var downloadBtn = document.getElementById('downloadBtn');
+(function() {
+  // DOM elements
+  var img = document.getElementById('waifu');
+  var newBtn = document.getElementById('newBtn');
+  var downloadBtn = document.getElementById('downloadBtn');
 
-    // Bảo vệ: nếu không tìm thấy element thì thoát
-    if (!imgElement || !newBtn || !downloadBtn) {
-      console.error('Missing DOM elements');
+  if (!img || !newBtn || !downloadBtn) return;
+
+  // --- API definitions (safe for Safari) ---
+  var API_LIST = [
+    {
+      name: 'waifu.im_maid',
+      url: 'https://api.waifu.im/search?included_tags=maid&height=%3C=1200',  // encoded '<=' -> '%3C='
+      extract: function(data) {
+        return data && data.images && data.images[0] ? data.images[0].url : null;
+      }
+    },
+    {
+      name: 'waifu.im_waifu',
+      url: 'https://api.waifu.im/search?included_tags=waifu&height=%3C=1200',
+      extract: function(data) {
+        return data && data.images && data.images[0] ? data.images[0].url : null;
+      }
+    },
+    {
+      name: 'waifu.pics',
+      url: 'https://api.waifu.pics/sfw/waifu',
+      extract: function(data) {
+        return data && data.url ? data.url : null;
+      }
+    },
+    {
+      name: 'nekos.best',
+      url: 'https://nekos.best/api/v2/waifu',
+      extract: function(data) {
+        return data && data.results && data.results[0] ? data.results[0].url : null;
+      }
+    },
+    {
+      name: 'nekos.best_neko',
+      url: 'https://nekos.best/api/v2/neko',
+      extract: function(data) {
+        return data && data.results && data.results[0] ? data.results[0].url : null;
+      }
+    }
+  ];
+
+  var currentUrl = '';
+  var lastUrl = '';
+  var isLoading = false;
+
+  // No crossOrigin set – let Safari handle CORS normally (more permissive)
+  // Add cache buster to avoid stale images
+  function bustCache(url) {
+    if (!url || typeof url !== 'string') return url;
+    var sep = url.indexOf('?') === -1 ? '?' : '&';
+    return url + sep + '_cb=' + Date.now();
+  }
+
+  // Fetch with timeout (no AbortController, just Promise.race)
+  function fetchTimeout(url, ms) {
+    ms = ms || 6000;
+    var controller = { timeout: null };
+    var fetchPromise = fetch(url);
+    var timeoutPromise = new Promise(function(_, reject) {
+      controller.timeout = setTimeout(function() {
+        reject(new Error('Timeout'));
+      }, ms);
+    });
+    return Promise.race([fetchPromise, timeoutPromise]).then(function(response) {
+      clearTimeout(controller.timeout);
+      return response;
+    }).catch(function(err) {
+      clearTimeout(controller.timeout);
+      throw err;
+    });
+  }
+
+  // Promise.any polyfill for old Safari (works)
+  function promiseAny(promises) {
+    return new Promise(function(resolve, reject) {
+      if (!promises.length) reject(new Error('No promises'));
+      var pending = promises.length;
+      var errors = [];
+      promises.forEach(function(p, i) {
+        p.then(resolve).catch(function(e) {
+          errors[i] = e;
+          pending--;
+          if (pending === 0) reject(new Error('All failed: ' + errors.map(function(e) { return e.message; }).join(', ')));
+        });
+      });
+    });
+  }
+
+  function shuffle(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = a[i];
+      a[i] = a[j];
+      a[j] = tmp;
+    }
+    return a;
+  }
+
+  function createPromise(api, avoidUrl) {
+    return fetchTimeout(api.url, 5000)
+      .then(function(res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function(data) {
+        var url = api.extract(data);
+        if (!url || typeof url !== 'string' || url.indexOf('http') !== 0) throw new Error('Bad URL');
+        if (url === avoidUrl || url === lastUrl) throw new Error('Duplicate');
+        return url;
+      });
+  }
+
+  async function fetchUnique(avoidUrl, retries) {
+    retries = retries !== undefined ? retries : 2;
+    for (var attempt = 0; attempt <= retries; attempt++) {
+      var apis = shuffle(API_LIST);
+      var promises = apis.map(function(api) { return createPromise(api, avoidUrl); });
+      try {
+        var win = await promiseAny(promises);
+        return win;
+      } catch(e) {
+        console.warn('Attempt', attempt+1, 'failed:', e.message);
+        if (attempt < retries) await new Promise(function(r) { setTimeout(r, 600); });
+      }
+    }
+    throw new Error('All retries failed');
+  }
+
+  function setLoading(loading) {
+    isLoading = loading;
+    if (loading) {
+      img.classList.add('loading');
+      newBtn.disabled = true;
+      downloadBtn.disabled = true;
+      newBtn.style.opacity = '0.6';
+      downloadBtn.style.opacity = '0.6';
+    } else {
+      img.classList.remove('loading');
+      newBtn.disabled = false;
+      downloadBtn.disabled = false;
+      newBtn.style.opacity = '1';
+      downloadBtn.style.opacity = '1';
+    }
+  }
+
+  function toast(msg) {
+    var div = document.createElement('div');
+    div.textContent = msg;
+    div.style.position = 'fixed';
+    div.style.bottom = '20px';
+    div.style.left = '20px';
+    div.style.right = '20px';
+    div.style.backgroundColor = '#ff4da6cc';
+    div.style.color = 'white';
+    div.style.padding = '10px';
+    div.style.borderRadius = '30px';
+    div.style.textAlign = 'center';
+    div.style.fontSize = '0.85rem';
+    div.style.zIndex = '999';
+    div.style.fontWeight = 'bold';
+    document.body.appendChild(div);
+    setTimeout(function() { div.remove(); }, 3000);
+  }
+
+  async function newWaifu() {
+    if (isLoading) return;
+    setLoading(true);
+    try {
+      var url = await fetchUnique(currentUrl);
+      if (!url) throw new Error('Empty URL');
+      currentUrl = url;
+      lastUrl = currentUrl;
+      img.src = bustCache(currentUrl);
+      img.alt = 'Waifu artwork';
+    } catch(err) {
+      console.error(err);
+      if (currentUrl) {
+        toast('⚠️ Failed to load new image, try again');
+      } else {
+        img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23222"%3E%3C/rect%3E%3Ctext x="50" y="55" font-size="12" fill="%23aaa" text-anchor="middle"%3E✨ click new ✨%3C/text%3E%3C/svg%3E';
+        currentUrl = '';
+        toast('⚠️ Could not load initial image, click "New Waifu"');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function downloadImage() {
+    if (!currentUrl) {
+      alert('No image to download. Generate one first!');
       return;
     }
-
-    // ---------- API list (không dùng optional chaining) ----------
-    var API_LIST = [
-      {
-        name: 'waifu.im_maid',
-        url: 'https://api.waifu.im/search?included_tags=maid&height=<=1200',
-        extract: function(data) {
-          return data && data.images && data.images[0] ? data.images[0].url : null;
-        }
-      },
-      {
-        name: 'waifu.im_waifu',
-        url: 'https://api.waifu.im/search?included_tags=waifu&height=<=1200',
-        extract: function(data) {
-          return data && data.images && data.images[0] ? data.images[0].url : null;
-        }
-      },
-      {
-        name: 'waifu.pics',
-        url: 'https://api.waifu.pics/sfw/waifu',
-        extract: function(data) {
-          return data && data.url ? data.url : null;
-        }
-      },
-      {
-        name: 'nekos.best',
-        url: 'https://nekos.best/api/v2/waifu',
-        extract: function(data) {
-          return data && data.results && data.results[0] ? data.results[0].url : null;
-        }
-      },
-      {
-        name: 'nekos.best_neko',
-        url: 'https://nekos.best/api/v2/neko',
-        extract: function(data) {
-          return data && data.results && data.results[0] ? data.results[0].url : null;
-        }
-      }
-    ];
-
-    var currentImgUrl = '';
-    var lastImgUrl = '';
-    var isLoading = false;
-
-    // --- Safari: set crossOrigin trước khi dùng (chỉ 1 lần) ---
     try {
-      imgElement.crossOrigin = 'Anonymous';
-    } catch(e) { /* bỏ qua nếu lỗi */ }
-
-    // Thêm timestamp chống cache (đặc biệt quan trọng trên Safari)
-    function addCacheBuster(url) {
-      if (!url || typeof url !== 'string') return url;
-      var separator = url.indexOf('?') !== -1 ? '&' : '?';
-      return url + separator + '_cb=' + Date.now();
+      toast('⬇️ Downloading...');
+      var resp = await fetch(currentUrl, { credentials: 'omit', mode: 'cors' });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      var blob = await resp.blob();
+      var blobUrl = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = 'waifu_' + Date.now() + '.jpg';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+      toast('✅ Download started');
+    } catch(e) {
+      console.warn(e);
+      window.open(currentUrl, '_blank');
+      toast('⚠️ Direct download failed, opened in new tab');
     }
+  }
 
-    // Fetch với timeout an toàn (không dùng AbortController)
-    function fetchWithTimeout(url, ms) {
-      ms = ms || 5000;
-      return new Promise(function(resolve, reject) {
-        var timeoutId = setTimeout(function() {
-          reject(new Error('Timeout'));
-        }, ms);
-        fetch(url)
-          .then(function(response) {
-            clearTimeout(timeoutId);
-            resolve(response);
-          })
-          .catch(function(error) {
-            clearTimeout(timeoutId);
-            reject(error);
-          });
-      });
-    }
-
-    // Promise.any polyfill thủ công
-    function safePromiseAny(promises) {
-      return new Promise(function(resolve, reject) {
-        if (!promises || promises.length === 0) {
-          reject(new Error('No promises'));
-          return;
-        }
-        var pending = promises.length;
-        var errors = [];
-        promises.forEach(function(promise, idx) {
-          promise.then(function(value) {
-            resolve(value);
-          }).catch(function(err) {
-            errors[idx] = err;
-            pending--;
-            if (pending === 0) {
-              reject(new Error('All promises rejected: ' + errors.map(function(e) { return e.message; }).join(', ')));
-            }
-          });
-        });
-      });
-    }
-
-    function shuffleApis() {
-      var shuffled = API_LIST.slice();
-      for (var i = shuffled.length - 1; i > 0; i--) {
-        var j = Math.floor(Math.random() * (i + 1));
-        var temp = shuffled[i];
-        shuffled[i] = shuffled[j];
-        shuffled[j] = temp;
-      }
-      return shuffled;
-    }
-
-    function createApiPromise(api, avoidUrl) {
-      return fetchWithTimeout(api.url)
-        .then(function(response) {
-          if (!response.ok) throw new Error('HTTP ' + response.status);
-          return response.json();
-        })
-        .then(function(data) {
-          var url = api.extract(data);
-          if (!url || typeof url !== 'string' || url.indexOf('http') !== 0) {
-            throw new Error('Invalid URL from ' + api.name);
-          }
-          if (url === avoidUrl || url === lastImgUrl) {
-            throw new Error('Duplicate image');
-          }
-          return url;
-        });
-    }
-
-    async function fetchUniqueImage(avoidUrl, retries) {
-      retries = (retries === undefined) ? 2 : retries;
-      for (var attempt = 0; attempt <= retries; attempt++) {
-        var apis = shuffleApis();
-        var promises = [];
-        for (var i = 0; i < apis.length; i++) {
-          promises.push(createApiPromise(apis[i], avoidUrl));
-        }
-        try {
-          var winner = await safePromiseAny(promises);
-          return winner;
-        } catch (e) {
-          console.warn('Attempt ' + (attempt+1) + ' failed:', e.message);
-          if (attempt < retries) {
-            await new Promise(function(res) { setTimeout(res, 600); });
-          }
-        }
-      }
-      throw new Error('All retries exhausted');
-    }
-
-    function setLoading(loading) {
-      isLoading = loading;
-      if (loading) {
-        imgElement.classList.add('loading');
-        newBtn.disabled = true;
-        downloadBtn.disabled = true;
-        newBtn.style.opacity = '0.6';
-        downloadBtn.style.opacity = '0.6';
-      } else {
-        imgElement.classList.remove('loading');
-        newBtn.disabled = false;
-        downloadBtn.disabled = false;
-        newBtn.style.opacity = '1';
-        downloadBtn.style.opacity = '1';
-      }
-    }
-
-    function showToast(message) {
-      var msgDiv = document.createElement('div');
-      msgDiv.textContent = message;
-      msgDiv.style.position = 'fixed';
-      msgDiv.style.bottom = '20px';
-      msgDiv.style.left = '20px';
-      msgDiv.style.right = '20px';
-      msgDiv.style.backgroundColor = '#ff4da6aa';
-      msgDiv.style.color = 'white';
-      msgDiv.style.padding = '10px';
-      msgDiv.style.borderRadius = '30px';
-      msgDiv.style.textAlign = 'center';
-      msgDiv.style.fontSize = '0.85rem';
-      msgDiv.style.backdropFilter = 'blur(10px)';
-      msgDiv.style.zIndex = '999';
-      msgDiv.style.fontWeight = 'bold';
-      document.body.appendChild(msgDiv);
-      setTimeout(function() { msgDiv.remove(); }, 3000);
-    }
-
-    async function newWaifu() {
-      if (isLoading) return;
-      setLoading(true);
-      try {
-        var newUrl = await fetchUniqueImage(currentImgUrl);
-        if (!newUrl) throw new Error('URL is null');
-        currentImgUrl = newUrl;
-        lastImgUrl = currentImgUrl;
-        imgElement.src = addCacheBuster(currentImgUrl);
-        imgElement.alt = 'Waifu artwork';
-      } catch (err) {
-        console.error('Image fetch error:', err);
-        if (currentImgUrl) {
-          showToast('⚠️ Could not fetch new image, please try again');
-        } else {
-          imgElement.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23222"%3E%3C/rect%3E%3Ctext x="50" y="55" font-size="12" fill="%23aaa" text-anchor="middle"%3E✨ click new ✨%3C/text%3E%3C/svg%3E';
-          currentImgUrl = '';
-          showToast('⚠️ Could not load initial image, please click "New Waifu"');
-        }
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    async function downloadWaifu() {
-      if (!currentImgUrl) {
-        alert('No image to download yet — click "New Waifu" first.');
-        return;
-      }
-      try {
-        showToast('⬇️ Preparing download...');
-        var response = await fetch(currentImgUrl, { credentials: 'omit' });
-        if (!response.ok) throw new Error('HTTP ' + response.status);
-        var blob = await response.blob();
-        var blobUrl = URL.createObjectURL(blob);
-        var link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = 'waifu_' + Date.now() + '.jpg';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(blobUrl);
-        showToast('✅ Download started!');
-      } catch (error) {
-        console.error('Download failed:', error);
-        window.open(currentImgUrl, '_blank');
-        showToast('⚠️ Direct download failed, image opened in new tab');
-      }
-    }
-
-    newBtn.addEventListener('click', newWaifu);
-    downloadBtn.addEventListener('click', downloadWaifu);
-    newWaifu();
-  })();
+  newBtn.addEventListener('click', newWaifu);
+  downloadBtn.addEventListener('click', downloadImage);
+  newWaifu();
+})();
 </script>
 </body>
 </html>
