@@ -39,229 +39,284 @@
 
 <script>
 (function() {
-  // DOM elements
-  var img = document.getElementById('waifu');
-  var newBtn = document.getElementById('newBtn');
-  var downloadBtn = document.getElementById('downloadBtn');
-
-  if (!img || !newBtn || !downloadBtn) return;
-
-  // --- API definitions (safe for Safari) ---
-  var API_LIST = [
-    {
-      name: 'waifu.im_maid',
-      url: 'https://api.waifu.im/search?included_tags=maid&height=%3C=1200',  // encoded '<=' -> '%3C='
-      extract: function(data) {
-        return data && data.images && data.images[0] ? data.images[0].url : null;
-      }
-    },
-    {
-      name: 'waifu.im_waifu',
-      url: 'https://api.waifu.im/search?included_tags=waifu&height=%3C=1200',
-      extract: function(data) {
-        return data && data.images && data.images[0] ? data.images[0].url : null;
-      }
-    },
-    {
-      name: 'waifu.pics',
-      url: 'https://api.waifu.pics/sfw/waifu',
-      extract: function(data) {
-        return data && data.url ? data.url : null;
-      }
-    },
-    {
-      name: 'nekos.best',
-      url: 'https://nekos.best/api/v2/waifu',
-      extract: function(data) {
-        return data && data.results && data.results[0] ? data.results[0].url : null;
-      }
-    },
-    {
-      name: 'nekos.best_neko',
-      url: 'https://nekos.best/api/v2/neko',
-      extract: function(data) {
-        return data && data.results && data.results[0] ? data.results[0].url : null;
-      }
-    }
-  ];
-
-  var currentUrl = '';
-  var lastUrl = '';
-  var isLoading = false;
-
-  // No crossOrigin set – let Safari handle CORS normally (more permissive)
-  // Add cache buster to avoid stale images
-  function bustCache(url) {
-    if (!url || typeof url !== 'string') return url;
-    var sep = url.indexOf('?') === -1 ? '?' : '&';
-    return url + sep + '_cb=' + Date.now();
+  // Đợi DOM hoàn tất để tránh lỗi null element trên Safari
+  function ready(fn) {
+    if (document.readyState !== 'loading') fn();
+    else document.addEventListener('DOMContentLoaded', fn);
   }
 
-  // Fetch with timeout (no AbortController, just Promise.race)
-  function fetchTimeout(url, ms) {
-    ms = ms || 6000;
-    var controller = { timeout: null };
-    var fetchPromise = fetch(url);
-    var timeoutPromise = new Promise(function(_, reject) {
-      controller.timeout = setTimeout(function() {
-        reject(new Error('Timeout'));
-      }, ms);
-    });
-    return Promise.race([fetchPromise, timeoutPromise]).then(function(response) {
-      clearTimeout(controller.timeout);
-      return response;
-    }).catch(function(err) {
-      clearTimeout(controller.timeout);
-      throw err;
-    });
-  }
+  ready(function() {
+    var img = document.getElementById('waifu');
+    var newBtn = document.getElementById('newBtn');
+    var downloadBtn = document.getElementById('downloadBtn');
 
-  // Promise.any polyfill for old Safari (works)
-  function promiseAny(promises) {
-    return new Promise(function(resolve, reject) {
-      if (!promises.length) reject(new Error('No promises'));
-      var pending = promises.length;
-      var errors = [];
-      promises.forEach(function(p, i) {
-        p.then(resolve).catch(function(e) {
-          errors[i] = e;
-          pending--;
-          if (pending === 0) reject(new Error('All failed: ' + errors.map(function(e) { return e.message; }).join(', ')));
-        });
-      });
-    });
-  }
-
-  function shuffle(arr) {
-    var a = arr.slice();
-    for (var i = a.length - 1; i > 0; i--) {
-      var j = Math.floor(Math.random() * (i + 1));
-      var tmp = a[i];
-      a[i] = a[j];
-      a[j] = tmp;
-    }
-    return a;
-  }
-
-  function createPromise(api, avoidUrl) {
-    return fetchTimeout(api.url, 5000)
-      .then(function(res) {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
-      })
-      .then(function(data) {
-        var url = api.extract(data);
-        if (!url || typeof url !== 'string' || url.indexOf('http') !== 0) throw new Error('Bad URL');
-        if (url === avoidUrl || url === lastUrl) throw new Error('Duplicate');
-        return url;
-      });
-  }
-
-  async function fetchUnique(avoidUrl, retries) {
-    retries = retries !== undefined ? retries : 2;
-    for (var attempt = 0; attempt <= retries; attempt++) {
-      var apis = shuffle(API_LIST);
-      var promises = apis.map(function(api) { return createPromise(api, avoidUrl); });
-      try {
-        var win = await promiseAny(promises);
-        return win;
-      } catch(e) {
-        console.warn('Attempt', attempt+1, 'failed:', e.message);
-        if (attempt < retries) await new Promise(function(r) { setTimeout(r, 600); });
-      }
-    }
-    throw new Error('All retries failed');
-  }
-
-  function setLoading(loading) {
-    isLoading = loading;
-    if (loading) {
-      img.classList.add('loading');
-      newBtn.disabled = true;
-      downloadBtn.disabled = true;
-      newBtn.style.opacity = '0.6';
-      downloadBtn.style.opacity = '0.6';
-    } else {
-      img.classList.remove('loading');
-      newBtn.disabled = false;
-      downloadBtn.disabled = false;
-      newBtn.style.opacity = '1';
-      downloadBtn.style.opacity = '1';
-    }
-  }
-
-  function toast(msg) {
-    var div = document.createElement('div');
-    div.textContent = msg;
-    div.style.position = 'fixed';
-    div.style.bottom = '20px';
-    div.style.left = '20px';
-    div.style.right = '20px';
-    div.style.backgroundColor = '#ff4da6cc';
-    div.style.color = 'white';
-    div.style.padding = '10px';
-    div.style.borderRadius = '30px';
-    div.style.textAlign = 'center';
-    div.style.fontSize = '0.85rem';
-    div.style.zIndex = '999';
-    div.style.fontWeight = 'bold';
-    document.body.appendChild(div);
-    setTimeout(function() { div.remove(); }, 3000);
-  }
-
-  async function newWaifu() {
-    if (isLoading) return;
-    setLoading(true);
-    try {
-      var url = await fetchUnique(currentUrl);
-      if (!url) throw new Error('Empty URL');
-      currentUrl = url;
-      lastUrl = currentUrl;
-      img.src = bustCache(currentUrl);
-      img.alt = 'Waifu artwork';
-    } catch(err) {
-      console.error(err);
-      if (currentUrl) {
-        toast('⚠️ Failed to load new image, try again');
-      } else {
-        img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23222"%3E%3C/rect%3E%3Ctext x="50" y="55" font-size="12" fill="%23aaa" text-anchor="middle"%3E✨ click new ✨%3C/text%3E%3C/svg%3E';
-        currentUrl = '';
-        toast('⚠️ Could not load initial image, click "New Waifu"');
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function downloadImage() {
-    if (!currentUrl) {
-      alert('No image to download. Generate one first!');
+    // Kiểm tra an toàn tuyệt đối
+    if (!img || !newBtn || !downloadBtn) {
+      console.error('Không tìm thấy element cần thiết');
       return;
     }
-    try {
-      toast('⬇️ Downloading...');
-      var resp = await fetch(currentUrl, { credentials: 'omit', mode: 'cors' });
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      var blob = await resp.blob();
-      var blobUrl = URL.createObjectURL(blob);
-      var a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = 'waifu_' + Date.now() + '.jpg';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
-      toast('✅ Download started');
-    } catch(e) {
-      console.warn(e);
-      window.open(currentUrl, '_blank');
-      toast('⚠️ Direct download failed, opened in new tab');
-    }
-  }
 
-  newBtn.addEventListener('click', newWaifu);
-  downloadBtn.addEventListener('click', downloadImage);
-  newWaifu();
+    // --- API definitions (an toàn, không dùng optional chaining mới) ---
+    var API_LIST = [
+      {
+        name: 'waifu.im_maid',
+        url: 'https://api.waifu.im/search?included_tags=maid&height=%3C=1200',
+        extract: function(data) {
+          if (data && data.images && data.images[0] && typeof data.images[0].url === 'string') {
+            return data.images[0].url;
+          }
+          return null;
+        }
+      },
+      {
+        name: 'waifu.im_waifu',
+        url: 'https://api.waifu.im/search?included_tags=waifu&height=%3C=1200',
+        extract: function(data) {
+          if (data && data.images && data.images[0] && typeof data.images[0].url === 'string') {
+            return data.images[0].url;
+          }
+          return null;
+        }
+      },
+      {
+        name: 'waifu.pics',
+        url: 'https://api.waifu.pics/sfw/waifu',
+        extract: function(data) {
+          if (data && typeof data.url === 'string') return data.url;
+          return null;
+        }
+      },
+      {
+        name: 'nekos.best',
+        url: 'https://nekos.best/api/v2/waifu',
+        extract: function(data) {
+          if (data && data.results && data.results[0] && typeof data.results[0].url === 'string') {
+            return data.results[0].url;
+          }
+          return null;
+        }
+      },
+      {
+        name: 'nekos.best_neko',
+        url: 'https://nekos.best/api/v2/neko',
+        extract: function(data) {
+          if (data && data.results && data.results[0] && typeof data.results[0].url === 'string') {
+            return data.results[0].url;
+          }
+          return null;
+        }
+      }
+    ];
+
+    var currentUrl = '';
+    var lastUrl = '';
+    var isLoading = false;
+
+    // Cache buster
+    function bustCache(url) {
+      if (!url || typeof url !== 'string') return url;
+      var sep = url.indexOf('?') === -1 ? '?' : '&';
+      return url + sep + '_cb=' + Date.now();
+    }
+
+    // fetch với timeout (không dùng AbortController để tương thích Safari cũ)
+    function fetchTimeout(url, ms) {
+      ms = ms || 6000;
+      var timeoutId;
+      var fetchPromise = fetch(url);
+      var timeoutPromise = new Promise(function(_, reject) {
+        timeoutId = setTimeout(function() {
+          reject(new Error('Request timeout'));
+        }, ms);
+      });
+      return Promise.race([fetchPromise, timeoutPromise]).then(function(response) {
+        clearTimeout(timeoutId);
+        return response;
+      }).catch(function(err) {
+        clearTimeout(timeoutId);
+        throw err;
+      });
+    }
+
+    // Shuffle array
+    function shuffle(arr) {
+      var a = arr.slice();
+      for (var i = a.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = a[i];
+        a[i] = a[j];
+        a[j] = tmp;
+      }
+      return a;
+    }
+
+    // Promise.any polyfill an toàn (trả về promise đầu tiên thành công)
+    function promiseAny(promises) {
+      if (!promises || promises.length === 0) {
+        return Promise.reject(new Error('No promises provided'));
+      }
+      return new Promise(function(resolve, reject) {
+        var rejectedCount = 0;
+        var errors = [];
+        promises.forEach(function(p, idx) {
+          Promise.resolve(p).then(resolve).catch(function(err) {
+            rejectedCount++;
+            errors[idx] = err;
+            if (rejectedCount === promises.length) {
+              reject(new Error('All promises rejected: ' + errors.map(function(e) { return e && e.message; }).join(', ')));
+            }
+          });
+        });
+      });
+    }
+
+    // Tạo promise cho một API, kiểm tra trùng lặp
+    function createPromise(api, avoidUrl) {
+      return fetchTimeout(api.url, 5000)
+        .then(function(res) {
+          if (!res || !res.ok) throw new Error('HTTP ' + (res ? res.status : 'unknown'));
+          return res.json();
+        })
+        .then(function(data) {
+          var url = api.extract(data);
+          if (!url || typeof url !== 'string' || url.indexOf('http') !== 0) {
+            throw new Error('Invalid URL from ' + api.name);
+          }
+          if (url === avoidUrl || url === lastUrl) {
+            throw new Error('Duplicate URL');
+          }
+          return url;
+        });
+    }
+
+    // Lấy URL mới, thử lần lượt các API
+    async function fetchUnique(avoidUrl, retries) {
+      retries = retries !== undefined ? retries : 2;
+      for (var attempt = 0; attempt <= retries; attempt++) {
+        var apis = shuffle(API_LIST);
+        var promises = apis.map(function(api) { return createPromise(api, avoidUrl); });
+        try {
+          var win = await promiseAny(promises);
+          return win;
+        } catch(e) {
+          console.warn('Attempt', attempt+1, 'failed:', e && e.message);
+          if (attempt < retries) {
+            await new Promise(function(r) { setTimeout(r, 600); });
+          }
+        }
+      }
+      throw new Error('All retries failed');
+    }
+
+    // UI loading state (kiểm tra null element mỗi lần)
+    function setLoading(loading) {
+      isLoading = loading;
+      if (!img || !newBtn || !downloadBtn) return;
+      if (loading) {
+        img.classList.add('loading');
+        newBtn.disabled = true;
+        downloadBtn.disabled = true;
+        newBtn.style.opacity = '0.6';
+        downloadBtn.style.opacity = '0.6';
+      } else {
+        img.classList.remove('loading');
+        newBtn.disabled = false;
+        downloadBtn.disabled = false;
+        newBtn.style.opacity = '1';
+        downloadBtn.style.opacity = '1';
+      }
+    }
+
+    // Thông báo tạm thời
+    function toast(msg) {
+      if (!document.body) return;
+      var div = document.createElement('div');
+      div.textContent = msg || '—';
+      div.style.position = 'fixed';
+      div.style.bottom = '20px';
+      div.style.left = '20px';
+      div.style.right = '20px';
+      div.style.backgroundColor = '#ff4da6cc';
+      div.style.color = 'white';
+      div.style.padding = '10px';
+      div.style.borderRadius = '30px';
+      div.style.textAlign = 'center';
+      div.style.fontSize = '0.85rem';
+      div.style.zIndex = '999';
+      div.style.fontWeight = 'bold';
+      document.body.appendChild(div);
+      setTimeout(function() { if (div && div.remove) div.remove(); }, 3000);
+    }
+
+    // Tải ảnh mới
+    async function newWaifu() {
+      if (isLoading) return;
+      setLoading(true);
+      try {
+        var url = await fetchUnique(currentUrl);
+        if (!url) throw new Error('Empty URL');
+        currentUrl = url;
+        lastUrl = currentUrl;
+        // Gán src an toàn
+        if (img) {
+          img.src = bustCache(currentUrl);
+          img.alt = 'Waifu artwork';
+        }
+      } catch(err) {
+        console.error('newWaifu error:', err);
+        if (img) {
+          if (currentUrl) {
+            toast('⚠️ Failed to load new image, try again');
+          } else {
+            img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23222"%3E%3C/rect%3E%3Ctext x="50" y="55" font-size="12" fill="%23aaa" text-anchor="middle"%3E✨ click new ✨%3C/text%3E%3C/svg%3E';
+            currentUrl = '';
+            toast('⚠️ Could not load initial image, click "New Waifu"');
+          }
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // Tải ảnh về máy
+    async function downloadImage() {
+      if (!currentUrl) {
+        toast('No image to download. Generate one first!');
+        return;
+      }
+      try {
+        toast('⬇️ Downloading...');
+        var resp = await fetch(currentUrl, { credentials: 'omit', mode: 'cors' });
+        if (!resp || !resp.ok) throw new Error('HTTP ' + (resp ? resp.status : 'unknown'));
+        var blob = await resp.blob();
+        if (!blob || blob.size === 0) throw new Error('Empty blob');
+        var blobUrl = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = 'waifu_' + Date.now() + '.jpg';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+        toast('✅ Download started');
+      } catch(e) {
+        console.warn('Download fallback:', e);
+        if (currentUrl && currentUrl.startsWith('http')) {
+          window.open(currentUrl, '_blank');
+          toast('⚠️ Direct download failed, opened in new tab');
+        } else {
+          toast('❌ Cannot download this image');
+        }
+      }
+    }
+
+    // Gắn sự kiện
+    newBtn.addEventListener('click', newWaifu);
+    downloadBtn.addEventListener('click', downloadImage);
+
+    // Tải ảnh đầu tiên
+    newWaifu();
+  });
 })();
 </script>
 </body>
